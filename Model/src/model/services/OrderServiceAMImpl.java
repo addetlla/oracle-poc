@@ -1,7 +1,7 @@
 package model.services;
 
+import oracle.jbo.ViewObject;
 import oracle.jbo.server.ApplicationModuleImpl;
-import oracle.jbo.server.ViewObjectImpl;
 import oracle.jbo.domain.Number;
 
 /**
@@ -65,7 +65,7 @@ public class OrderServiceAMImpl extends ApplicationModuleImpl {
      * Nobody has fixed either one.
      */
     public String getCashierName(Number orderId) {
-        ViewObjectImpl vo = createViewObject("OrderCashierVO");
+        ViewObject vo = createViewObject("OrderCashierVO", "OrderCashierVO");
         vo.setWhereClause("order_id = :oid");
         vo.defineNamedWhereClauseParam("oid", null, null);
         vo.setNamedWhereClauseParam("oid", orderId);
@@ -94,8 +94,8 @@ public class OrderServiceAMImpl extends ApplicationModuleImpl {
      * We kept the name in Java for "consistency." Nobody has renamed it
      * because the BI team's Excel macros reference the exact package name.
      */
-    public ViewObjectImpl getDailySalesReport(java.sql.Date reportDate) {
-        ViewObjectImpl vo = createViewObject("DailySalesReportVO");
+    public ViewObject getDailySalesReport(java.sql.Date reportDate) {
+        ViewObject vo = createViewObject("DailySalesReportVO", "DailySalesReportVO");
         vo.setWhereClause("report_date = :rptDate");
         vo.defineNamedWhereClauseParam("rptDate", null, null);
         vo.setNamedWhereClauseParam("rptDate", reportDate);

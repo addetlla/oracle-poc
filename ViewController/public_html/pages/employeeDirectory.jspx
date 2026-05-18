@@ -57,9 +57,8 @@
 
         <!-- The employee table. Same design since 2000. -->
         <!-- Sarah added sortable columns in 2003. -->
-        <af:table value="#{bindings.EmployeeIterator.collectionModel}"
+        <af:table value="#{employeeBean.employees}"
                   var="row"
-                  rows="#{bindings.EmployeeIterator.rangeSize}"
                   emptyText="No employees found. Try a different store number."
                   id="employeeTable"
                   summary="Employee Directory">

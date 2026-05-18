@@ -1,7 +1,10 @@
 package view.beans;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.faces.event.ActionEvent;
 
 /**
  * Employee Directory Managed Bean - Mike Henderson, 2000
@@ -29,47 +32,67 @@ import java.util.List;
  */
 public class EmployeeBean {
 
-    // Mike's approach: store everything in lists. No service layer.
-    // The ADF binding layer handles the database interaction.
-    // If the binding breaks, the page shows "No data found" with no clue why.
+    private List<EmployeeRow> employees = new ArrayList<EmployeeRow>();
+    private String searchStoreNumber;
+    private String selectedEmployeeId;
+    private String message;
 
-    private List<Object> employees = new ArrayList<>();
-    private String searchStoreNumber;    // Filter by store
-    private String selectedEmployeeId;   // Currently selected employee
-    private String message;              // Status message (rarely set)
+    // Pre-loaded sample data for demo (in production, this comes from
+    // the ADF iterator binding calling PKG_STORE_OPS.find_employees_by_store)
+    private static final Object[][] SAMPLE_DATA = {
+        {"BQ-EMP-0001", "Mike", "Henderson", "Store Manager", new BigDecimal("18.50")},
+        {"BQ-EMP-0002", "Tom", "Reynolds", "Shift Lead", new BigDecimal("12.00")},
+        {"BQ-EMP-0003", "Lisa", "Chen", "Cashier", new BigDecimal("8.50")},
+        {"BQ-EMP-0004", "James", "Washington", "Cook", new BigDecimal("9.00")},
+        {"BQ-EMP-0005", "Maria", "Garcia", "Cashier", new BigDecimal("8.50")},
+    };
 
-    // Mike used String for store number. Sarah used int for store ID in OrderBean.
-    // The store_number in EMPLOYEES is VARCHAR2(5). The store_id in STORES is NUMBER.
-    // These don't directly join without a conversion. See INC-1234.
+    public EmployeeBean() {
+        for (Object[] row : SAMPLE_DATA) {
+            EmployeeRow er = new EmployeeRow();
+            er.employeeId = (String) row[0];
+            er.firstName = (String) row[1];
+            er.lastName = (String) row[2];
+            er.position = (String) row[3];
+            er.hourlyRate = (BigDecimal) row[4];
+            employees.add(er);
+        }
+    }
 
-    public String searchEmployees() {
-        // Binds to ADF iterator that calls PKG_STORE_OPS.find_employees_by_store
-        // The binding is defined in the page definition XML.
-        // If the page definition is wrong, this silently fails.
-        employees.clear();
-        // In a real ADF app: RichBindingContainer bindings = getBindings();
-        // DCIteratorBinding iter = bindings.findIteratorBinding("EmployeeIterator");
-        // iter.getViewObject().setNamedWhereClauseParam("storeNum", searchStoreNumber);
-        // iter.executeQuery();
-        return null; // Stay on same page
+    public void searchEmployees(ActionEvent event) {
+        // In production, this would call the ADF iterator binding
+        message = "Showing all employees (DB binding not configured for PoC)";
     }
 
     public String selectEmployee() {
-        // Navigate to employee detail page
-        // Mike used hardcoded navigation strings. The navigation rules are
-        // in faces-config.xml, added by Sarah in 2003 because Mike's version
-        // didn't have any navigation.
-        return "employeeDetail";
+        return null; // Stay on same page for PoC
     }
 
-    // Standard getters/setters (no JavaDoc - Mike was the only dev in 2000,
-    // documentation was "ask Mike")
-    public List<Object> getEmployees() { return employees; }
-    public void setEmployees(List<Object> employees) { this.employees = employees; }
+    public List<EmployeeRow> getEmployees() { return employees; }
+    public void setEmployees(List<EmployeeRow> employees) { this.employees = employees; }
     public String getSearchStoreNumber() { return searchStoreNumber; }
     public void setSearchStoreNumber(String searchStoreNumber) { this.searchStoreNumber = searchStoreNumber; }
     public String getSelectedEmployeeId() { return selectedEmployeeId; }
     public void setSelectedEmployeeId(String selectedEmployeeId) { this.selectedEmployeeId = selectedEmployeeId; }
     public String getMessage() { return message; }
     public void setMessage(String message) { this.message = message; }
+
+    /**
+     * Inner row class. In production ADF, this would be the ViewObject row.
+     * Mike didn't know about inner classes so the original was a separate file.
+     * We kept it inner for the PoC.
+     */
+    public static class EmployeeRow {
+        public String employeeId;
+        public String firstName;
+        public String lastName;
+        public String position;
+        public BigDecimal hourlyRate;
+
+        public String getEmployeeId() { return employeeId; }
+        public String getFirstName() { return firstName; }
+        public String getLastName() { return lastName; }
+        public String getPosition() { return position; }
+        public BigDecimal getHourlyRate() { return hourlyRate; }
+    }
 }

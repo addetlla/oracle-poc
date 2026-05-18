@@ -175,6 +175,10 @@
          <string v="Application1_ViewController_webapp"/>
       </list>
    </hash>
+   <hash n="oracle.jdeveloper.model.J2eeSettings">
+      <value n="j2eeWebAppName" v="ViewController"/>
+      <value n="j2eeWebContextRoot" v="ViewController"/>
+   </hash>
    <hash n="oracle.jdeveloper.model.PathsConfiguration">
       <hash n="javaContentSet">
          <list n="pattern-filters">
@@ -183,6 +187,15 @@
          <list n="url-path">
             <url path="src/"/>
          </list>
+      </hash>
+   </hash>
+   <hash n="oracle.jdeveloper.runner.RunConfigurations">
+      <hash n="runConfigurationDefinitions">
+         <hash n="Default">
+            <value n="custom" v="false"/>
+            <value n="name" v="Default"/>
+            <url n="targetURL" path="public_html/pages/employeeDirectory.jspx"/>
+         </hash>
       </hash>
    </hash>
    <hash n="oracle.jdevimpl.config.JProjectLibraries">

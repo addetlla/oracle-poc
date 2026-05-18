@@ -1,7 +1,7 @@
 package model.services;
 
+import oracle.jbo.ViewObject;
 import oracle.jbo.server.ApplicationModuleImpl;
-import oracle.jbo.server.ViewObjectImpl;
 import oracle.jbo.server.ViewLinkImpl;
 import oracle.jbo.domain.Number;
 
@@ -42,8 +42,8 @@ public class StoreOpsAMImpl extends ApplicationModuleImpl {
      * Still used by the HR page, the POS terminal, the manager dashboard,
      * and the new(ish) mobile app (via a REST wrapper in 2018).
      */
-    public ViewObjectImpl findEmployeesByStore(String storeNumber) {
-        ViewObjectImpl vo = createViewObject("EmployeeVO");
+    public ViewObject findEmployeesByStore(String storeNumber) {
+        ViewObject vo = createViewObject("EmployeeVO", "EmployeeVO");
         vo.setWhereClause("store_number = :storeNum AND is_active = 'Y'");
         vo.defineNamedWhereClauseParam("storeNum", null, null);
         vo.setNamedWhereClauseParam("storeNum", storeNumber);
@@ -105,8 +105,8 @@ public class StoreOpsAMImpl extends ApplicationModuleImpl {
      * thing but accesses the CUSTOMERS table directly instead of using this.
      * The mobile app uses theirs. The web app uses this.
      */
-    public ViewObjectImpl findCustomerByEmail(String email) {
-        ViewObjectImpl vo = createViewObject("CustomerVO");
+    public ViewObject findCustomerByEmail(String email) {
+        ViewObject vo = createViewObject("CustomerVO", "CustomerVO");
         vo.setWhereClause("email = :emailAddr AND is_active = 'Y'");
         vo.defineNamedWhereClauseParam("emailAddr", null, null);
         vo.setNamedWhereClauseParam("emailAddr", email);
@@ -138,8 +138,8 @@ public class StoreOpsAMImpl extends ApplicationModuleImpl {
     // Emergency delivery support. Copied the pattern from findEmployeesByStore.
     // Didn't have time to create a separate AM.
 
-    public ViewObjectImpl findAvailableDrivers(String storeNumber) {
-        ViewObjectImpl vo = createViewObject("DeliveryDriverVO");
+    public ViewObject findAvailableDrivers(String storeNumber) {
+        ViewObject vo = createViewObject("DeliveryDriverVO", "DeliveryDriverVO");
         vo.setWhereClause("is_active_flg = 'Y'");
         vo.executeQuery();
         return vo;

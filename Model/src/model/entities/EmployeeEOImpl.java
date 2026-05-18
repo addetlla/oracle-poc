@@ -3,6 +3,7 @@ package model.entities;
 import oracle.jbo.server.EntityImpl;
 import oracle.jbo.server.EntityDefImpl;
 import oracle.jbo.server.AttributeDefImpl;
+import oracle.jbo.AttributeList;
 import oracle.jbo.domain.Date;
 import oracle.jbo.domain.Number;
 

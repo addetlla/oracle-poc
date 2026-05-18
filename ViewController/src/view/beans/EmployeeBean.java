@@ -1,35 +1,14 @@
 package view.beans;
 
 import java.math.BigDecimal;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.faces.event.ActionEvent;
 
-/**
- * Employee Directory Managed Bean - Mike Henderson, 2000
- *
- * The very first managed bean in BurgerQuick. Request-scoped,
- * no dependency injection, basic JSF binding. This pattern was
- * considered "modern" in 2000 because it wasn't a servlet.
- *
- * Mike learned JSF from the early access draft spec.
- * It shows. No validation, no error handling, no navigation cases.
- * Just a simple bean that reads from the database and displays a table.
- *
- * EVERY subsequent developer has copied this bean for their own pages.
- * The pattern is baked into the entire codebase:
- *   - OrderBean (Sarah, 2003) - copied this, added session scope
- *   - FranchiseDashboardBean (Raj, 2006) - copied OrderBean
- *   - OnlineOrderBean (Jason, 2009) - copied FranchiseDashboardBean
- *   - LoyaltyBean (Wei, 2012) - copied OnlineOrderBean
- *   - DeliveryTrackerBean (Dave, 2020) - copied LoyaltyBean
- *
- * Each copy added features but nobody refactored the base pattern.
- * Now there are 6 beans with 80% duplicated structure and 20% divergent logic.
- *
- * - Mike
- */
+import oracle.jdbc.OracleTypes;
+
 public class EmployeeBean {
 
     private List<EmployeeRow> employees = new ArrayList<EmployeeRow>();
@@ -37,62 +16,255 @@ public class EmployeeBean {
     private String selectedEmployeeId;
     private String message;
 
-    // Pre-loaded sample data for demo (in production, this comes from
-    // the ADF iterator binding calling PKG_STORE_OPS.find_employees_by_store)
-    private static final Object[][] SAMPLE_DATA = {
-        {"BQ-EMP-0001", "Mike", "Henderson", "Store Manager", new BigDecimal("18.50")},
-        {"BQ-EMP-0002", "Tom", "Reynolds", "Shift Lead", new BigDecimal("12.00")},
-        {"BQ-EMP-0003", "Lisa", "Chen", "Cashier", new BigDecimal("8.50")},
-        {"BQ-EMP-0004", "James", "Washington", "Cook", new BigDecimal("9.00")},
-        {"BQ-EMP-0005", "Maria", "Garcia", "Cashier", new BigDecimal("8.50")},
-    };
+    private String selectedEmployeeName;
+
+    private String editEmployeeId;
+    private String editFirstName;
+    private String editLastName;
+    private String editPosition;
+    private BigDecimal editHourlyRate;
+    private String editStoreNumber;
+    private boolean editing;
+    private boolean showForm;
+
+    private static final String DB_URL = "jdbc:oracle:thin:@localhost:1521/ORCLPDB1";
+    private static final String DB_USER = "system";
+    private static final String DB_PASS = "Oracle123!";
 
     public EmployeeBean() {
-        for (Object[] row : SAMPLE_DATA) {
-            EmployeeRow er = new EmployeeRow();
-            er.employeeId = (String) row[0];
-            er.firstName = (String) row[1];
-            er.lastName = (String) row[2];
-            er.position = (String) row[3];
-            er.hourlyRate = (BigDecimal) row[4];
-            employees.add(er);
+        loadAllEmployees();
+    }
+
+    private Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
+    }
+
+    private EmployeeRow mapRow(ResultSet rs) throws SQLException {
+        EmployeeRow r = new EmployeeRow();
+        r.employeeId = rs.getString("employee_id");
+        r.firstName = rs.getString("first_name");
+        r.lastName = rs.getString("last_name");
+        r.position = rs.getString("position");
+        r.hourlyRate = rs.getBigDecimal("hourly_rate");
+        r.storeNumber = rs.getString("store_number");
+        return r;
+    }
+
+    // ---- PKG_STORE_OPS.get_all_employees ----
+    public void loadAllEmployees() {
+        employees.clear();
+        try (Connection conn = getConnection();
+             CallableStatement cs = conn.prepareCall("{ ? = call PKG_STORE_OPS.get_all_employees }")) {
+            cs.registerOutParameter(1, OracleTypes.CURSOR);
+            cs.execute();
+            try (ResultSet rs = (ResultSet) cs.getObject(1)) {
+                while (rs.next()) {
+                    employees.add(mapRow(rs));
+                }
+            }
+            message = null;
+        } catch (SQLException e) {
+            message = "DB Error: " + e.getMessage();
         }
     }
 
+    // ---- PKG_STORE_OPS.find_employees_by_store ----
     public void searchEmployees(ActionEvent event) {
-        // In production, this would call the ADF iterator binding
-        message = "Showing all employees (DB binding not configured for PoC)";
+        selectedEmployeeId = null;
+        selectedEmployeeName = null;
+        if (searchStoreNumber == null || searchStoreNumber.trim().isEmpty()) {
+            loadAllEmployees();
+            return;
+        }
+        employees.clear();
+        try (Connection conn = getConnection();
+             CallableStatement cs = conn.prepareCall("{ ? = call PKG_STORE_OPS.find_employees_by_store(?) }")) {
+            cs.registerOutParameter(1, OracleTypes.CURSOR);
+            cs.setString(2, searchStoreNumber.trim());
+            cs.execute();
+            try (ResultSet rs = (ResultSet) cs.getObject(1)) {
+                while (rs.next()) {
+                    employees.add(mapRow(rs));
+                }
+            }
+            message = employees.isEmpty() ? "No employees in store " + searchStoreNumber : null;
+        } catch (SQLException e) {
+            message = "Search error: " + e.getMessage();
+        }
+    }
+
+    // ---- clear search ----
+    public String clearSearch() {
+        searchStoreNumber = null;
+        selectedEmployeeId = null;
+        selectedEmployeeName = null;
+        message = null;
+        loadAllEmployees();
+        return null;
+    }
+
+    // ---- PKG_STORE_OPS.hire_employee ----
+    public String prepareAdd() {
+        selectedEmployeeId = null;
+        selectedEmployeeName = null;
+        editEmployeeId = null;
+        editFirstName = null;
+        editLastName = null;
+        editPosition = null;
+        editHourlyRate = null;
+        editStoreNumber = null;
+        editing = false;
+        showForm = true;
+        message = null;
+        return null;
+    }
+
+    public String saveEmployee() {
+        if (editing) {
+            return doUpdate();
+        }
+        try (Connection conn = getConnection();
+             CallableStatement cs = conn.prepareCall("{ call PKG_STORE_OPS.hire_employee(?,?,?,?,?,?) }")) {
+            cs.setString(1, editFirstName);
+            cs.setString(2, editLastName);
+            cs.setString(3, "000-00-0000"); // SSN placeholder
+            cs.setString(4, editStoreNumber != null ? editStoreNumber : "1");
+            cs.setString(5, editPosition);
+            cs.setBigDecimal(6, editHourlyRate);
+            cs.execute();
+            message = "Employee hired successfully.";
+            loadAllEmployees();
+            showForm = false;
+        } catch (SQLException e) {
+            message = "Error hiring: " + e.getMessage();
+        }
+        return null;
+    }
+
+    // ---- PKG_STORE_OPS.update_employee ----
+    public String prepareEdit() {
+        if (selectedEmployeeId == null) {
+            message = "Select an employee first.";
+            return null;
+        }
+        try (Connection conn = getConnection();
+             CallableStatement cs = conn.prepareCall("{ ? = call PKG_STORE_OPS.get_employee(?) }")) {
+            cs.registerOutParameter(1, OracleTypes.CURSOR);
+            cs.setString(2, selectedEmployeeId);
+            cs.execute();
+            try (ResultSet rs = (ResultSet) cs.getObject(1)) {
+                if (rs.next()) {
+                    editEmployeeId = rs.getString("employee_id");
+                    editFirstName = rs.getString("first_name");
+                    editLastName = rs.getString("last_name");
+                    editPosition = rs.getString("position");
+                    editHourlyRate = rs.getBigDecimal("hourly_rate");
+                    editStoreNumber = rs.getString("store_number");
+                    editing = true;
+                    showForm = true;
+                }
+            }
+        } catch (SQLException e) {
+            message = "Error loading: " + e.getMessage();
+        }
+        return null;
+    }
+
+    private String doUpdate() {
+        try (Connection conn = getConnection();
+             CallableStatement cs = conn.prepareCall("{ call PKG_STORE_OPS.update_employee(?,?,?,?,?,?) }")) {
+            cs.setString(1, editEmployeeId);
+            cs.setString(2, editFirstName);
+            cs.setString(3, editLastName);
+            cs.setString(4, editPosition);
+            cs.setBigDecimal(5, editHourlyRate);
+            cs.setString(6, editStoreNumber);
+            cs.execute();
+            message = "Employee " + editEmployeeId + " updated successfully.";
+            editing = false;
+            showForm = false;
+            loadAllEmployees();
+        } catch (SQLException e) {
+            message = "Error updating: " + e.getMessage();
+        }
+        return null;
+    }
+
+    // ---- PKG_STORE_OPS.fire_employee ----
+    public String deleteEmployee() {
+        if (selectedEmployeeId == null) {
+            message = "Select an employee first.";
+            return null;
+        }
+        String name = selectedEmployeeName != null ? selectedEmployeeName : selectedEmployeeId;
+        try (Connection conn = getConnection();
+             CallableStatement cs = conn.prepareCall("{ call PKG_STORE_OPS.fire_employee(?) }")) {
+            cs.setString(1, selectedEmployeeId);
+            cs.execute();
+            message = "Employee " + name + " deactivated.";
+        } catch (SQLException e) {
+            message = "Error: " + e.getMessage();
+        }
+        selectedEmployeeId = null;
+        selectedEmployeeName = null;
+        loadAllEmployees();
+        return null;
     }
 
     public String selectEmployee() {
-        return null; // Stay on same page for PoC
+        if (selectedEmployeeId != null) {
+            for (EmployeeRow r : employees) {
+                if (selectedEmployeeId.equals(r.employeeId)) {
+                    selectedEmployeeName = r.firstName + " " + r.lastName + " (" + r.employeeId + ")";
+                    return null;
+                }
+            }
+        }
+        selectedEmployeeName = null;
+        return null;
     }
 
+    public String cancelEdit() {
+        showForm = false;
+        editing = false;
+        message = null;
+        return null;
+    }
+
+    // ---- Getters / Setters ----
     public List<EmployeeRow> getEmployees() { return employees; }
-    public void setEmployees(List<EmployeeRow> employees) { this.employees = employees; }
+    public void setEmployees(List<EmployeeRow> e) { this.employees = e; }
     public String getSearchStoreNumber() { return searchStoreNumber; }
-    public void setSearchStoreNumber(String searchStoreNumber) { this.searchStoreNumber = searchStoreNumber; }
+    public void setSearchStoreNumber(String s) { this.searchStoreNumber = s; }
     public String getSelectedEmployeeId() { return selectedEmployeeId; }
-    public void setSelectedEmployeeId(String selectedEmployeeId) { this.selectedEmployeeId = selectedEmployeeId; }
+    public void setSelectedEmployeeId(String s) { this.selectedEmployeeId = s; }
+    public String getSelectedEmployeeName() { return selectedEmployeeName; }
+    public void setSelectedEmployeeName(String s) { this.selectedEmployeeName = s; }
     public String getMessage() { return message; }
-    public void setMessage(String message) { this.message = message; }
+    public void setMessage(String s) { this.message = s; }
+    public String getEditEmployeeId() { return editEmployeeId; }
+    public void setEditEmployeeId(String s) { this.editEmployeeId = s; }
+    public String getEditFirstName() { return editFirstName; }
+    public void setEditFirstName(String s) { this.editFirstName = s; }
+    public String getEditLastName() { return editLastName; }
+    public void setEditLastName(String s) { this.editLastName = s; }
+    public String getEditPosition() { return editPosition; }
+    public void setEditPosition(String s) { this.editPosition = s; }
+    public BigDecimal getEditHourlyRate() { return editHourlyRate; }
+    public void setEditHourlyRate(BigDecimal b) { this.editHourlyRate = b; }
+    public String getEditStoreNumber() { return editStoreNumber; }
+    public void setEditStoreNumber(String s) { this.editStoreNumber = s; }
+    public boolean isEditing() { return editing; }
+    public boolean isShowForm() { return showForm; }
 
-    /**
-     * Inner row class. In production ADF, this would be the ViewObject row.
-     * Mike didn't know about inner classes so the original was a separate file.
-     * We kept it inner for the PoC.
-     */
     public static class EmployeeRow {
-        public String employeeId;
-        public String firstName;
-        public String lastName;
-        public String position;
+        public String employeeId, firstName, lastName, position, storeNumber;
         public BigDecimal hourlyRate;
-
         public String getEmployeeId() { return employeeId; }
         public String getFirstName() { return firstName; }
         public String getLastName() { return lastName; }
         public String getPosition() { return position; }
         public BigDecimal getHourlyRate() { return hourlyRate; }
+        public String getStoreNumber() { return storeNumber; }
     }
 }

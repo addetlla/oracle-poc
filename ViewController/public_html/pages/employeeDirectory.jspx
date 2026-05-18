@@ -1,27 +1,5 @@
 <!--
-  Employee Directory Page - BurgerQuick
-  Created: Mike Henderson, March 2000
-
-  The very first page in BurgerQuick. Built with early JSP/JSF.
-  JDeveloper generated this from a drag-and-drop template.
-  Mike added the search field manually.
-
-  Pattern notes:
-  - Uses af:table (ADF Faces) with direct iterator binding
-  - No page template - every page has its own layout
-  - Inline styles (CSS was "too new")
-  - Hardcoded column names
-  - No responsive design (phones? in 2000?)
-  - Harcoded "Store #1" default
-
-  This page has been in production for 23 years without a major redesign.
-  It's been patched 47 times according to git blame.
-  The layout still works, somehow.
-
-  - Mike
-  - Sarah (added navigation links, 2003)
-  - Jason (added link to web ordering, 2009)
-  - Security audit (added CSRF token, 2016 - but it's in a comment, not actually enforced)
+  Employee Directory Page - BurgerQuick CRUD
 -->
 <jsp:root xmlns:jsp="http://java.sun.com/JSP/Page"
           xmlns:f="http://java.sun.com/jsf/core"
@@ -33,37 +11,90 @@
   <f:view>
     <af:document title="BurgerQuick - Employee Directory">
 
-      <!-- Mike's layout: simple panel with header -->
-      <af:panelHeader text="Employee Directory">
+      <af:form>
+        <af:panelHeader text="Employee Directory">
+
+        <!-- Toolbar -->
         <f:facet name="toolbar">
-          <!-- Sarah added navigation links in 2003 -->
-          <!-- Jason added web ordering link in 2009 -->
           <af:toolbar>
-            <af:commandButton text="Orders" action="orderManagement"/>
-            <af:commandButton text="Franchises" action="franchiseDashboard"/>
-            <af:commandButton text="Order Online" action="onlineOrder"/> <!-- Added 2009 -->
+            <af:inputText label="Store #" simple="true"
+                          value="#{employeeBean.searchStoreNumber}"
+                          id="storeNumInput" columns="5"/>
+            <af:commandButton text="Search"
+                              actionListener="#{employeeBean.searchEmployees}"
+                              id="searchBtn"/>
+            <af:commandButton text="Show All"
+                              action="#{employeeBean.clearSearch}"
+                              id="clearBtn"/>
+            <af:spacer width="20"/>
+            <af:commandButton text="+ Hire Employee"
+                              action="#{employeeBean.prepareAdd}"
+                              id="addBtn"/>
           </af:toolbar>
         </f:facet>
 
-        <!-- Mike's search: simple input + button, no validation -->
-        <af:panelFormLayout>
-          <af:inputText label="Store Number"
-                        value="#{employeeBean.searchStoreNumber}"
-                        id="storeNumInput"/>
-          <af:commandButton text="Search"
-                            actionListener="#{employeeBean.searchEmployees}"
-                            id="searchBtn"/>
-        </af:panelFormLayout>
+        <!-- Status message -->
+        <af:panelGroupLayout id="msgWrapper" partialTriggers="addBtn editBtn deleteBtn searchBtn cancelBtn saveBtn clearBtn">
+          <af:panelGroupLayout id="msgPanel"
+                               rendered="#{employeeBean.message != null}"
+                               inlineStyle="background:#fff3cd;padding:8px;margin-bottom:10px;">
+            <af:outputText value="#{employeeBean.message}" id="statusMsg"/>
+          </af:panelGroupLayout>
+        </af:panelGroupLayout>
 
-        <!-- The employee table. Same design since 2000. -->
-        <!-- Sarah added sortable columns in 2003. -->
+        <!-- Add/Edit Form -->
+        <af:panelGroupLayout id="formWrapper" partialTriggers="addBtn editBtn cancelBtn saveBtn clearBtn">
+          <af:panelFormLayout id="editForm"
+                              rendered="#{employeeBean.showForm}"
+                              inlineStyle="background:#f0f0f0;padding:12px;margin-bottom:12px;border:1px solid #999;border-radius:4px;">
+
+          <af:outputText value="#{employeeBean.editing ? 'Edit Employee: '.concat(employeeBean.editEmployeeId) : 'New Employee'}"
+                         id="formTitle"
+                         inlineStyle="font-size:14px;font-weight:bold;"/>
+
+          <af:inputText label="First Name" value="#{employeeBean.editFirstName}"
+                        id="editFn" required="true" columns="25"/>
+          <af:inputText label="Last Name" value="#{employeeBean.editLastName}"
+                        id="editLn" required="true" columns="25"/>
+          <af:inputText label="Position" value="#{employeeBean.editPosition}"
+                        id="editPos" columns="25"/>
+          <af:inputText label="Hourly Rate" value="#{employeeBean.editHourlyRate}"
+                        id="editRate" columns="10">
+            <f:convertNumber pattern="#0.00"/>
+          </af:inputText>
+          <af:inputText label="Store #" value="#{employeeBean.editStoreNumber}"
+                        id="editStore" columns="5"/>
+
+          <af:panelGroupLayout layout="horizontal">
+            <af:commandButton text="Save" action="#{employeeBean.saveEmployee}"
+                              id="saveBtn"/>
+            <af:spacer width="8"/>
+            <af:commandButton text="Cancel" action="#{employeeBean.cancelEdit}"
+                              id="cancelBtn" immediate="true"/>
+          </af:panelGroupLayout>
+        </af:panelFormLayout>
+        </af:panelGroupLayout>
+
+        <!-- Employee Table -->
         <af:table value="#{employeeBean.employees}"
                   var="row"
-                  emptyText="No employees found. Try a different store number."
+                  emptyText="No employees found."
                   id="employeeTable"
-                  summary="Employee Directory">
+                  summary="Employee Directory"
+                  partialTriggers="addBtn editBtn deleteBtn searchBtn cancelBtn saveBtn clearBtn">
 
-          <af:column sortable="true" headerText="ID" id="colId">
+          <af:column headerText="" id="colSelect" width="40" align="center">
+            <af:commandLink text="#{row.employeeId == employeeBean.selectedEmployeeId ? 'Sel ✓' : 'Sel'}"
+                            action="#{employeeBean.selectEmployee}"
+                            id="clSelect"
+                            partialSubmit="true"
+                            inlineStyle="#{row.employeeId == employeeBean.selectedEmployeeId ? 'font-weight:bold;color:#1a73e8;' : ''}">
+              <af:setActionListener from="#{row.employeeId}"
+                                    to="#{employeeBean.selectedEmployeeId}"/>
+            </af:commandLink>
+          </af:column>
+
+          <af:column sortable="true" headerText="ID" id="colId" width="130">
             <af:outputText value="#{row.employeeId}" id="otId"/>
           </af:column>
 
@@ -76,11 +107,6 @@
           </af:column>
 
           <af:column sortable="true" headerText="Position" id="colPosition">
-            <!--
-              NOTE: "position" might contain a job title OR a POS terminal ID.
-              See EmployeeEOImpl.java comments for why.
-              If you see "REG-03" in the position column, that's a terminal, not a job.
-            -->
             <af:outputText value="#{row.position}" id="otPos"/>
           </af:column>
 
@@ -90,21 +116,28 @@
             </af:outputText>
           </af:column>
 
-          <!--
-            SECURITY NOTE: SSN column was removed from display in 2018
-            after the security audit flagged it as PII exposure.
-            But the column is still in the View Object.
-            If someone adds it back to this table, SSNs will display.
-            See INC-10234 (2019).
-          -->
-
-          <af:column headerText="Details" id="colDetail">
-            <af:commandButton text="View"
-                              action="#{employeeBean.selectEmployee}"
-                              id="viewBtn"/>
+          <af:column sortable="true" headerText="Store" id="colStore" width="60">
+            <af:outputText value="#{row.storeNumber}" id="otStore"/>
           </af:column>
         </af:table>
+
+        <!-- Actions -->
+        <af:panelGroupLayout layout="horizontal" inlineStyle="margin-top:10px;">
+          <af:outputText value="Selected: #{employeeBean.selectedEmployeeName}"
+                         id="selectedLabel"
+                         rendered="#{employeeBean.selectedEmployeeName != null}"
+                         inlineStyle="margin-right:12px;font-weight:bold;color:#333;"/>
+          <af:commandButton text="Edit Selected"
+                            action="#{employeeBean.prepareEdit}"
+                            id="editBtn"/>
+          <af:spacer width="10"/>
+          <af:commandButton text="Deactivate Selected"
+                            action="#{employeeBean.deleteEmployee}"
+                            id="deleteBtn"/>
+        </af:panelGroupLayout>
+
       </af:panelHeader>
+      </af:form>
     </af:document>
   </f:view>
 </jsp:root>

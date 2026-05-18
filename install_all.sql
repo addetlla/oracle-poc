@@ -56,18 +56,15 @@ CREATE TABLE AUDIT_LOG (
     new_values  VARCHAR2(4000)
 );
 -- ============================================================
--- PKG_STORE_OPS - Core Store Operations Package
--- Author: Mike Henderson, March 2000
--- ============================================================
--- This is THE package for all store operations.
--- I've kept everything in one package so it's easy to find.
--- If you need to add something, add it here. Don't create new packages.
--- - Mike
+-- PKG_STORE_OPS - Updates for Employee CRUD (2024)
+-- Adds missing get_all_employees, update_employee
+-- Fixes find_employees_by_store to include store_number
 -- ============================================================
 
 CREATE OR REPLACE PACKAGE PKG_STORE_OPS AS
 
     -- Employee functions
+    FUNCTION get_all_employees RETURN SYS_REFCURSOR;
     FUNCTION get_employee(p_emp_id VARCHAR2) RETURN SYS_REFCURSOR;
     FUNCTION find_employees_by_store(p_store_no VARCHAR2) RETURN SYS_REFCURSOR;
     PROCEDURE hire_employee(
@@ -78,16 +75,24 @@ CREATE OR REPLACE PACKAGE PKG_STORE_OPS AS
         p_position VARCHAR2,
         p_hourly_rate NUMBER
     );
-    PROCEDURE fire_employee(p_emp_id VARCHAR2);  -- Mike's naming: direct!
+    PROCEDURE update_employee(
+        p_emp_id VARCHAR2,
+        p_first_name VARCHAR2,
+        p_last_name VARCHAR2,
+        p_position VARCHAR2,
+        p_hourly_rate NUMBER,
+        p_store_number VARCHAR2
+    );
+    PROCEDURE fire_employee(p_emp_id VARCHAR2);
 
     -- Inventory functions
     FUNCTION get_inventory_status(p_store_no VARCHAR2) RETURN SYS_REFCURSOR;
     PROCEDURE update_inventory(
         p_sku VARCHAR2,
-        p_quantity_change NUMBER,  -- negative for deduction
+        p_quantity_change NUMBER,
         p_store_no VARCHAR2
     );
-    FUNCTION check_reorder_needed(p_sku VARCHAR2) RETURN CHAR;  -- Returns Y/N
+    FUNCTION check_reorder_needed(p_sku VARCHAR2) RETURN CHAR;
 
     -- General
     FUNCTION get_next_employee_id RETURN VARCHAR2;
@@ -106,7 +111,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_STORE_OPS AS
 
     FUNCTION get_next_employee_id RETURN VARCHAR2 IS
         v_count NUMBER;
-        v_new_id VARCHAR2(10);
+        v_new_id VARCHAR2(11);
     BEGIN
         SELECT COUNT(*) + 1 INTO v_count FROM EMPLOYEES;
         v_new_id := 'BQ-EMP-' || LPAD(v_count, 4, '0');
@@ -125,6 +130,17 @@ CREATE OR REPLACE PACKAGE BODY PKG_STORE_OPS AS
         VALUES (p_table, p_action, p_key, USER, p_old_val, p_new_val);
     END;
 
+    FUNCTION get_all_employees RETURN SYS_REFCURSOR IS
+        v_cursor SYS_REFCURSOR;
+    BEGIN
+        OPEN v_cursor FOR
+            SELECT employee_id, first_name, last_name, position, hourly_rate, store_number
+            FROM EMPLOYEES
+            WHERE is_active = 'Y'
+            ORDER BY employee_id;
+        RETURN v_cursor;
+    END;
+
     FUNCTION get_employee(p_emp_id VARCHAR2) RETURN SYS_REFCURSOR IS
         v_cursor SYS_REFCURSOR;
     BEGIN
@@ -137,9 +153,10 @@ CREATE OR REPLACE PACKAGE BODY PKG_STORE_OPS AS
         v_cursor SYS_REFCURSOR;
     BEGIN
         OPEN v_cursor FOR
-            SELECT employee_id, first_name, last_name, position, hourly_rate
+            SELECT employee_id, first_name, last_name, position, hourly_rate, store_number
             FROM EMPLOYEES
-            WHERE store_number = p_store_no AND is_active = 'Y';
+            WHERE store_number = p_store_no AND is_active = 'Y'
+            ORDER BY employee_id;
         RETURN v_cursor;
     END;
 
@@ -151,12 +168,32 @@ CREATE OR REPLACE PACKAGE BODY PKG_STORE_OPS AS
         p_position VARCHAR2,
         p_hourly_rate NUMBER
     ) IS
-        v_new_id VARCHAR2(10);
+        v_new_id VARCHAR2(11);
     BEGIN
         v_new_id := get_next_employee_id();
         INSERT INTO EMPLOYEES (employee_id, first_name, last_name, ssn, store_number, position, hourly_rate)
         VALUES (v_new_id, p_first_name, p_last_name, p_ssn, p_store_number, p_position, p_hourly_rate);
         log_audit('EMPLOYEES', 'INSERT', v_new_id, NULL, p_first_name || ' ' || p_last_name);
+        COMMIT;
+    END;
+
+    PROCEDURE update_employee(
+        p_emp_id VARCHAR2,
+        p_first_name VARCHAR2,
+        p_last_name VARCHAR2,
+        p_position VARCHAR2,
+        p_hourly_rate NUMBER,
+        p_store_number VARCHAR2
+    ) IS
+    BEGIN
+        UPDATE EMPLOYEES
+        SET first_name = p_first_name,
+            last_name = p_last_name,
+            position = p_position,
+            hourly_rate = p_hourly_rate,
+            store_number = p_store_number
+        WHERE employee_id = p_emp_id;
+        log_audit('EMPLOYEES', 'UPDATE', p_emp_id, NULL, p_first_name || ' ' || p_last_name);
         COMMIT;
     END;
 

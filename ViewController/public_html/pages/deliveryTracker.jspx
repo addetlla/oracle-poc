@@ -1,0 +1,127 @@
+<!--
+  Delivery Tracker Page - BurgerQuick
+  Created: Dave (Emergency Contractor), March 2020
+
+  Copy-pasted from loyaltyRewards.jspx (Wei, 2012)
+  which was copy-pasted from onlineOrder.jspx (Jason, 2009)
+  which was copy-pasted from orderManagement.jspx (Sarah, 2003).
+
+  The copy-paste was so hasty that the original page title
+  ("Loyalty Rewards") still appeared in the browser tab until
+  someone noticed in May 2020.
+
+  This page was built during the first week of COVID lockdowns.
+  There was no design review. No code review. No testing beyond
+  "does it show the delivery list?"
+
+  It works. Mostly. Don't refresh too fast or it double-assigns drivers.
+  Don't click "Cancel Delivery" on an order that's already delivered
+  (it restocks the inventory incorrectly - see WEB_ORDER_PKG.cancel_online_order).
+
+  - Dave (contract ended May 2020)
+  - Maintained by: The intern (summer 2020), then nobody specifically
+-->
+<jsp:root xmlns:jsp="http://java.sun.com/JSP/Page"
+          xmlns:f="http://java.sun.com/jsf/core"
+          xmlns:af="http://xmlns.oracle.com/adf/faces/rich"
+          version="2.1">
+
+  <jsp:directive.page contentType="text/html;charset=UTF-8"/>
+
+  <f:view>
+    <af:document title="BurgerQuick - Delivery Tracker">
+
+      <af:panelHeader text="Delivery Tracker (Beta)">
+        <f:facet name="context">
+          <!--
+            Still marked "Beta" after 3 years in production.
+            Nobody has removed the beta label because nobody
+            considers this feature "complete."
+            It handles 30% of orders. It's in production. It's beta.
+          -->
+          <af:outputText value="Beta - Launched March 2020"
+                         id="betaLabel"/>
+        </f:facet>
+
+        <!--
+          Copy-pasted filter panel from onlineOrder.jspx.
+          The "Payment Method" filter is still here.
+          It doesn't filter anything for delivery.
+          Removing it breaks the page layout.
+        -->
+        <af:panelFormLayout>
+          <af:inputText label="Filter by Driver"
+                        value="#{deliveryTrackerBean.driverFilter}"
+                        id="driverFilter"/>
+
+          <!-- Dead filter from the original loyaltyRewards.jspx page -->
+          <af:selectOneChoice label="Loyalty Tier"
+                              value="#{deliveryTrackerBean.loyaltyTier}"
+                              id="loyaltyTierFilter" rendered="false">
+            <!-- rendered="false" because loyalty tiers don't apply to delivery.
+                 The JSF EL expression still evaluates and throws a warning
+                 in the server logs. The ops team ignores these warnings. -->
+          </af:selectOneChoice>
+
+          <af:commandButton text="Refresh"
+                            actionListener="#{deliveryTrackerBean.updateStatus}"
+                            id="refreshBtn"/>
+        </af:panelFormLayout>
+
+        <!-- Delivery table - copied from order table pattern -->
+        <af:table value="#{bindings.DeliveryListIterator.collectionModel}"
+                  var="row" id="deliveryTable"
+                  summary="Active deliveries"
+                  emptyText="No active deliveries. This might be wrong - try refreshing.">
+
+          <af:column headerText="Order #" id="colOrderNum">
+            <af:outputText value="#{row.onlineOrderId}" id="otOrderId"/>
+          </af:column>
+
+          <af:column headerText="Status" id="colStatus">
+            <af:outputText value="#{row.status}" id="otStatus"/>
+          </af:column>
+
+          <af:column headerText="Driver" id="colDriver">
+            <af:outputText value="#{row.driverName}" id="otDriver"/>
+          </af:column>
+
+          <af:column headerText="Est. Delivery" id="colEstDelivery">
+            <af:outputText value="#{row.estimatedDelivery}" id="otEstDel"/>
+          </af:column>
+
+          <af:column headerText="Action" id="colAction">
+            <af:commandButton text="Assign Driver"
+                              actionListener="#{deliveryTrackerBean.assignDriver}"
+                              id="assignBtn"/>
+            <!--
+              KNOWN BUG: Double-clicking "Assign Driver" assigns
+              the same driver to multiple deliveries. The driver
+              availability flag was never implemented.
+              See DeliveryTrackerBean.java for the full story.
+            -->
+          </af:column>
+        </af:table>
+
+        <!-- ============================================================
+             HIDDEN LOYALTY SECTION (FROM COPY-PASTE)
+             ============================================================
+             This div was in loyaltyRewards.jspx and was copied here.
+             It's not visible but the EL expressions still evaluate.
+             Removing it causes "Target not found" errors because
+             the page template references the loyalty IDs.
+
+             The errors are suppressed in production by a global
+             error handler that ignores "Target not found" messages.
+             This was easier than finding all copy-pasted remnants
+             across 47 JSF pages.
+             ============================================================ -->
+        <div style="display:none;">
+          <af:outputText value="#{deliveryTrackerBean.loyaltyPointsBalance}"
+                         id="hiddenLoyaltyPoints"/>
+        </div>
+
+      </af:panelHeader>
+    </af:document>
+  </f:view>
+</jsp:root>

@@ -1,0 +1,118 @@
+-- ============================================================
+-- BurgerQuick Systems - Known Issues & Tech Debt Register
+-- Last Updated: March 2023
+-- Maintained by: Whoever drew the short straw this sprint
+-- ============================================================
+
+-- ============================================================
+-- INVENTORY OF ALL STORED PROCEDURES (as far as we know)
+-- ============================================================
+-- PACKAGE/PROCEDURE              | AUTHOR  | YEAR | STATUS
+-- -------------------------------+---------+------+----------
+-- PKG_STORE_OPS                  | Mike    | 2000 | ACTIVE - Everything depends on this
+-- sp_create_order                | Sarah   | 2003 | ACTIVE - POS still uses directly
+-- sp_add_order_item              | Sarah   | 2003 | ACTIVE
+-- sp_complete_order              | Sarah   | 2003 | ACTIVE - Called by 6+ other procs
+-- sp_get_order_total             | Sarah   | 2003 | ACTIVE - Only used by 1 report
+-- sp_calculate_inventory_usage   | Sarah   | 2003 | UNKNOWN - May be dead code
+-- sp_log_hours                   | Sarah   | 2003 | ACTIVE
+-- sp_calculate_payroll           | Sarah   | 2003 | ACTIVE - But payroll moving to ADP in 2024
+-- FRANCHISE_PKG                  | Raj     | 2006 | SEMI-ACTIVE - Only 3 franchises use it
+-- SUPPLIER_PKG                   | Anil    | 2006 | ACTIVE
+-- sp_register_customer           | Jason   | 2009 | ACTIVE - Web registration
+-- sp_check_email_exists          | Jason   | 2009 | ACTIVE
+-- sp_get_customer_by_email       | Jason   | 2009 | ACTIVE - Web login
+-- WEB_ORDER_PKG                  | Jason   | 2009 | ACTIVE - Web ordering
+-- LOYALTY_PKG                    | Dmitri  | 2012 | ACTIVE - But buggy (see issues below)
+-- p_MobileOps                    | Wei     | 2012 | ACTIVE - Mobile app
+-- RPT_DAILY_SALES_V2_FINAL_...   | BI Team | 2015 | ACTIVE - Reports run on this
+-- API_ORDER_SERVICE              | Marcus  | 2018 | SEMI-ACTIVE - Only mobile uses REST
+-- DELIVERY_PKG                   | Various | 2020 | ACTIVE - Delivery is 30% of orders now
+-- migrate_users_to_new_schema    | Marcus  | 2018 | DEAD - Never implemented
+-- USERS table                    | Marcus  | 2018 | DEAD - Never populated
+-- TEMP_FRANCHISE_OWNER_LINK      | Anil    | 2006 | DEAD - Junction table never finished
+-- MV_LEGACY_DAILY_SALES_PRE_2015 | Unknown | 2012 | DEAD? - Exists in prod, not in code
+
+-- ============================================================
+-- KNOWN CALL CHAINS (how deep does the nesting go?)
+-- ============================================================
+-- 1. API Order:
+--    API_ORDER_SERVICE.api_create_order
+--      -> WEB_ORDER_PKG.place_online_order
+--        -> sp_create_order (Sarah)
+--        -> sp_complete_order (Sarah)
+--          -> PKG_STORE_OPS.update_inventory (Mike)
+--
+-- 2. In-Store Order:
+--    POS -> sp_create_order -> sp_add_order_item -> sp_complete_order
+--      -> PKG_STORE_OPS.update_inventory
+--
+-- 3. Loyalty Redemption:
+--    LOYALTY_PKG.redeem_points
+--      -> sp_complete_order
+--        -> PKG_STORE_OPS.update_inventory
+--
+-- 4. Mobile Order:
+--    p_MobileOps.placeMobileOrder
+--      -> sp_create_order
+--      -> sp_complete_order
+--        -> PKG_STORE_OPS.update_inventory
+--
+-- 5. Delivery (inventory already deducted by web order flow):
+--    DELIVERY_PKG.create_delivery
+--      -> (no inventory call - already done by WEB_ORDER_PKG)
+--
+-- OBSERVATION: Everything flows into PKG_STORE_OPS.update_inventory.
+--              If that procedure breaks, EVERYTHING breaks.
+
+-- ============================================================
+-- KNOWN BUGS & ISSUES
+-- ============================================================
+-- 1. Menu-to-SKU mapping is hardcoded in 3 different places:
+--    - sp_complete_order (2003)
+--    - sp_calculate_inventory_usage (2003)
+--    - LOYALTY_PKG.inventory_for_reward (2012)
+--    Adding a new menu item requires updating all three.
+--    Adding a new SKU-to-menu mapping requires updating all three.
+--    Nobody has done this consistently. Some menu items don't deduct inventory.
+
+-- 2. Customer lookup is duplicated:
+--    - sp_get_customer_by_email returns a cursor
+--    - p_MobileOps.authenticateUser does direct table access
+--    - LOYALTY_PKG.enroll_customer accesses CUSTOMERS directly
+--    No single source of truth for customer data.
+
+-- 3. Order totals are calculated differently in different places:
+--    - sp_get_order_total: pre-tax subtotal
+--    - FRANCHISE_PKG.calculate_franchise_order_total: includes tax
+--    - WEB_ORDER_PKG.parse_order_total: returns 0 (calculated in Java)
+--    - DELIVERY_PKG.calculate_delivery_total: includes delivery fee + tip
+
+-- 4. nightly_points_recalc takes 45 minutes and blocks other processes.
+--    If it fails, all customer loyalty points are wrong until the next run.
+
+-- 5. cancel_online_order restocks inventory as BEEF-PATTY-4 regardless
+--    of what was actually ordered. Known since 2009. Never fixed.
+
+-- 6. FRANCHISE_OWNER_LINK junction table was created but never used.
+--    Owner data is duplicated between FRANCHISES and FRANCHISE_OWNERS.
+
+-- 7. The USERS migration project (2018) was abandoned. The tables exist
+--    but are empty. A new developer might think they're the canonical
+--    user tables and try to use them.
+
+-- 8. Naming conventions across the codebase:
+--    - is_active (Mike, 2000)
+--    - _yn suffix (Sarah, 2003)
+--    - _flg suffix (Loyalty team, 2012)
+--    - is_active_flg (Delivery team, 2020 - combined two conventions!)
+--    All mean the same thing. Good luck.
+
+-- ============================================================
+-- THINGS NOBODY DARES TO CHANGE
+-- ============================================================
+-- - PKG_STORE_OPS.update_inventory: called by everything
+-- - ORDERS table structure: POS depends on exact column order
+-- - MV_LEGACY_DAILY_SALES_PRE_2015: CFO's spreadsheet depends on it
+-- - sp_complete_order: hardcoded SKU mappings, known buggy, still critical
+-- - The nightly refresh job: undocumented, fragile, essential

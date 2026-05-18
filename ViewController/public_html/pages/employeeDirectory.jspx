@@ -1,0 +1,111 @@
+<!--
+  Employee Directory Page - BurgerQuick
+  Created: Mike Henderson, March 2000
+
+  The very first page in BurgerQuick. Built with early JSP/JSF.
+  JDeveloper generated this from a drag-and-drop template.
+  Mike added the search field manually.
+
+  Pattern notes:
+  - Uses af:table (ADF Faces) with direct iterator binding
+  - No page template - every page has its own layout
+  - Inline styles (CSS was "too new")
+  - Hardcoded column names
+  - No responsive design (phones? in 2000?)
+  - Harcoded "Store #1" default
+
+  This page has been in production for 23 years without a major redesign.
+  It's been patched 47 times according to git blame.
+  The layout still works, somehow.
+
+  - Mike
+  - Sarah (added navigation links, 2003)
+  - Jason (added link to web ordering, 2009)
+  - Security audit (added CSRF token, 2016 - but it's in a comment, not actually enforced)
+-->
+<jsp:root xmlns:jsp="http://java.sun.com/JSP/Page"
+          xmlns:f="http://java.sun.com/jsf/core"
+          xmlns:af="http://xmlns.oracle.com/adf/faces/rich"
+          version="2.1">
+
+  <jsp:directive.page contentType="text/html;charset=UTF-8"/>
+
+  <f:view>
+    <af:document title="BurgerQuick - Employee Directory">
+
+      <!-- Mike's layout: simple panel with header -->
+      <af:panelHeader text="Employee Directory">
+        <f:facet name="toolbar">
+          <!-- Sarah added navigation links in 2003 -->
+          <!-- Jason added web ordering link in 2009 -->
+          <af:toolbar>
+            <af:commandButton text="Orders" action="orderManagement"/>
+            <af:commandButton text="Franchises" action="franchiseDashboard"/>
+            <af:commandButton text="Order Online" action="onlineOrder"/> <!-- Added 2009 -->
+          </af:toolbar>
+        </f:facet>
+
+        <!-- Mike's search: simple input + button, no validation -->
+        <af:panelFormLayout>
+          <af:inputText label="Store Number"
+                        value="#{employeeBean.searchStoreNumber}"
+                        id="storeNumInput"/>
+          <af:commandButton text="Search"
+                            actionListener="#{employeeBean.searchEmployees}"
+                            id="searchBtn"/>
+        </af:panelFormLayout>
+
+        <!-- The employee table. Same design since 2000. -->
+        <!-- Sarah added sortable columns in 2003. -->
+        <af:table value="#{bindings.EmployeeIterator.collectionModel}"
+                  var="row"
+                  rows="#{bindings.EmployeeIterator.rangeSize}"
+                  emptyText="No employees found. Try a different store number."
+                  id="employeeTable"
+                  summary="Employee Directory">
+
+          <af:column sortable="true" headerText="ID" id="colId">
+            <af:outputText value="#{row.employeeId}" id="otId"/>
+          </af:column>
+
+          <af:column sortable="true" headerText="First Name" id="colFirstName">
+            <af:outputText value="#{row.firstName}" id="otFn"/>
+          </af:column>
+
+          <af:column sortable="true" headerText="Last Name" id="colLastName">
+            <af:outputText value="#{row.lastName}" id="otLn"/>
+          </af:column>
+
+          <af:column sortable="true" headerText="Position" id="colPosition">
+            <!--
+              NOTE: "position" might contain a job title OR a POS terminal ID.
+              See EmployeeEOImpl.java comments for why.
+              If you see "REG-03" in the position column, that's a terminal, not a job.
+            -->
+            <af:outputText value="#{row.position}" id="otPos"/>
+          </af:column>
+
+          <af:column sortable="true" headerText="Hourly Rate" id="colRate">
+            <af:outputText value="#{row.hourlyRate}" id="otRate">
+              <f:convertNumber type="currency"/>
+            </af:outputText>
+          </af:column>
+
+          <!--
+            SECURITY NOTE: SSN column was removed from display in 2018
+            after the security audit flagged it as PII exposure.
+            But the column is still in the View Object.
+            If someone adds it back to this table, SSNs will display.
+            See INC-10234 (2019).
+          -->
+
+          <af:column headerText="Details" id="colDetail">
+            <af:commandButton text="View"
+                              action="#{employeeBean.selectEmployee}"
+                              id="viewBtn"/>
+          </af:column>
+        </af:table>
+      </af:panelHeader>
+    </af:document>
+  </f:view>
+</jsp:root>

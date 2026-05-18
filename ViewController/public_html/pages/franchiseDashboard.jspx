@@ -1,0 +1,163 @@
+<!--
+  Franchise Dashboard Page - BurgerQuick
+  Created: Offshore Team (Raj), September 2006
+
+  The most complex page in the application.
+  Built by copying orderManagement.jspx and adding panels.
+  Then more panels were added. Then more.
+
+  Current state: 12 panels, 8 tabs, 4 data tables, 2 charts
+  Page load time: 4-8 seconds (optimized from 15 in 2015)
+
+  This page has had 28 JIRAs filed against it.
+  14 were "won't fix." 8 were "fixed" but the fix broke something else.
+  6 are still open, oldest from 2011.
+
+  The layout is held together with inline styles and hope.
+  Do not refactor. Last refactor attempt (2019) caused a 3-day outage.
+  Rolled back and instituted a "touch FranchiseDashboard at your own risk" policy.
+
+  - Raj (2006-2008)
+  - Dmitri (added loyalty panel, 2012)
+  - BI Team (added charts panel, 2015)
+  - Dave (added delivery panel, 2020)
+-->
+<jsp:root xmlns:jsp="http://java.sun.com/JSP/Page"
+          xmlns:f="http://java.sun.com/jsf/core"
+          xmlns:af="http://xmlns.oracle.com/adf/faces/rich"
+          xmlns:dvt="http://xmlns.oracle.com/adf/faces/rich/dvt"
+          version="2.1">
+
+  <jsp:directive.page contentType="text/html;charset=UTF-8"/>
+
+  <f:view>
+    <af:document title="BurgerQuick - Franchise Dashboard">
+
+      <af:panelHeader text="Franchise Operations Dashboard">
+        <f:facet name="context">
+          <af:outputText value="Data refreshes nightly. Last refresh: unknown." id="refreshNote"/>
+        </f:facet>
+
+        <!-- ============================================================
+             TAB PANEL (Raj, 2006 with additions)
+             Each tab was added by a different team in a different year.
+             The tab order is chronological (oldest first) because
+             nobody wanted to reorder and break the tab indexes that
+             other pages link to.
+             ============================================================ -->
+        <af:panelTabbed id="franchiseTabs">
+
+          <!-- TAB 1: Franchise Overview (Raj, 2006) -->
+          <af:showDetailItem text="Overview" id="tabOverview">
+            <af:panelFormLayout>
+              <af:selectOneChoice label="Select Franchise"
+                                  value="#{franchiseDashboardBean.selectedFranchiseId}"
+                                  id="franchiseSelect">
+                <f:selectItems value="#{bindings.FranchiseListIterator.collectionModel}"/>
+              </af:selectOneChoice>
+
+              <af:inputText label="Territory Filter"
+                            value="#{franchiseDashboardBean.territoryFilter}"
+                            id="territoryFilter"/>
+
+              <af:commandButton text="Load Data"
+                                actionListener="#{franchiseDashboardBean.exportFranchiseDataLegacy}"
+                                id="loadBtn"/>
+              <!--
+                NOTE: The Load Data button calls exportFranchiseDataLegacy().
+                Nobody knows what that method does. The button has been here since 2007.
+                It doesn't seem to break anything so we leave it.
+                Removing the button causes adfc-config.xml navigation errors.
+                See INC-7834.
+              -->
+            </af:panelFormLayout>
+          </af:showDetailItem>
+
+          <!-- TAB 2: Sales Metrics (Raj, 2006) -->
+          <af:showDetailItem text="Sales" id="tabSales">
+            <af:panelFormLayout>
+              <af:outputText value="#{franchiseDashboardBean.totalRevenue}"
+                             id="revenueDisplay">
+                <f:convertNumber type="currency"/>
+              </af:outputText>
+              <af:outputText value="#{franchiseDashboardBean.royaltyOwed}"
+                             id="royaltyDisplay">
+                <f:convertNumber type="currency"/>
+              </af:outputText>
+
+              <!-- BI Team added this chart in 2015 -->
+              <dvt:barChart id="salesChart"
+                            summary="Monthly sales chart - data source: RPT_DAILY_SALES_V2_FINAL_USE_THIS">
+                <!-- Chart data binding breaks when the nightly refresh fails.
+                     The chart renders empty with no error message.
+                     Users assume the data is zero. It's not zero. The refresh failed. -->
+              </dvt:barChart>
+            </af:panelFormLayout>
+          </af:showDetailItem>
+
+          <!-- TAB 3: Loyalty (Dmitri, 2012) -->
+          <af:showDetailItem text="Loyalty" id="tabLoyalty">
+            <af:panelFormLayout>
+              <af:outputText value="#{franchiseDashboardBean.loyaltyMembers}"
+                             id="loyaltyMembersDisplay"/>
+              <af:outputText value="#{franchiseDashboardBean.pointsIssued}"
+                             id="pointsIssuedDisplay"/>
+
+              <!--
+                WARNING: Clicking Refresh recalculates ALL customer loyalty points.
+                This takes 45 minutes and blocks the entire system.
+                DO NOT CLICK THIS BUTTON during business hours.
+                - Dmitri, 2012
+              -->
+              <af:commandButton text="Refresh Loyalty Data (Nightly Only!)"
+                                actionListener="#{franchiseDashboardBean.calculateLoyaltyMetrics}"
+                                id="refreshLoyaltyBtn"/>
+            </af:panelFormLayout>
+          </af:showDetailItem>
+
+          <!-- TAB 4: Delivery (Dave, 2020) -->
+          <af:showDetailItem text="Delivery" id="tabDelivery">
+            <af:panelFormLayout>
+              <af:outputText value="#{franchiseDashboardBean.deliveryRevenue}"
+                             id="deliveryRevenueDisplay"/>
+              <af:outputText value="#{franchiseDashboardBean.avgDeliveryTime}"
+                             id="avgDeliveryDisplay"/>
+
+              <!--
+                This tab was added in 3 days. It has minimal features.
+                The "Export" button was planned but never implemented.
+                The button is disabled but visible. The PM said to leave it
+                so franchisees know "export is coming."
+                It's been "coming" since April 2020.
+              -->
+              <af:commandButton text="Export Delivery Report"
+                                disabled="true"
+                                id="exportDeliveryBtn"/>
+            </af:panelFormLayout>
+          </af:showDetailItem>
+
+        </af:panelTabbed>
+      </af:panelHeader>
+
+      <!--
+        INLINE STYLE HACK (Raj, 2007):
+        The franchise table extends beyond the panel in IE6.
+        This overflow:hidden was the fix. IE6 is no longer supported
+        but removing this breaks the layout in Chrome for reasons
+        nobody can explain. It's been here for 16 years.
+        Leave it.
+      -->
+      <div style="overflow:hidden; width:100%;">
+        <af:table value="#{bindings.FranchiseTableIterator.collectionModel}"
+                  var="row" id="franchiseTable"
+                  summary="Franchise performance data">
+          <!-- Table columns omitted for brevity.
+               There are 18 columns. 6 of them are always null.
+               3 reference tables that were dropped in 2014.
+               Nobody knows which columns are safe to remove. -->
+        </af:table>
+      </div>
+
+    </af:document>
+  </f:view>
+</jsp:root>

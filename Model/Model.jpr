@@ -69,10 +69,38 @@
       <string v="oracle.toplink.workbench.addin/toplinkContentSet"/>
    </list>
    <value n="defaultPackage" v="model"/>
+   <hash n="oracle.ide.model.ResourcePaths">
+      <hash n="resourcesContentSet">
+         <list n="constituent-sets">
+            <hash>
+               <list n="pattern-filters">
+                  <string v="+.gitignore"/>
+               </list>
+               <list n="url-path">
+                  <url path="../"/>
+               </list>
+            </hash>
+            <hash>
+               <list n="pattern-filters">
+                  <string v="+*"/>
+               </list>
+               <list n="url-path">
+                  <url path="."/>
+               </list>
+            </hash>
+         </list>
+         <list n="url-path"/>
+      </hash>
+   </hash>
    <hash n="oracle.ide.model.TechnologyScopeConfiguration">
       <list n="technologyScope">
+         <string v="ADF_FACES"/>
          <string v="ADFbc"/>
+         <string v="ADFc"/>
+         <string v="JSF"/>
+         <string v="JSP"/>
          <string v="Java"/>
+         <string v="TRINIDAD"/>
          <string v="XML"/>
       </list>
    </hash>
@@ -135,7 +163,298 @@
          </list>
       </hash>
    </hash>
+   <hash n="oracle.jdevimpl.config.JProjectLibraries">
+      <list n="exportedReferences">
+         <hash>
+            <value n="id" v="JSP Runtime"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="JSF 2.2"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="JSTL 1.2"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="ADF Page Flow Runtime"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="ADF Controller Runtime"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="ADF Controller Schema"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="ADF Faces Runtime 11"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="ADF Common Runtime"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="ADF Web Runtime"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="MDS Runtime"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="MDS Runtime Dependencies"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="Commons Beanutils 1.6"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="Commons Logging 1.0.4"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="Commons Collections 3.1"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="Apache Http Components"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="ADF DVT Faces Runtime"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="ADF DVT Faces Databinding Runtime"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="ADF DVT Faces Databinding MDS Runtime"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+      </list>
+      <list n="libraryReferences">
+         <hash>
+            <value n="id" v="JSP Runtime"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="JSF 2.2"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="JSTL 1.2"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="ADF Page Flow Runtime"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="ADF Controller Runtime"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="ADF Controller Schema"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="ADF Faces Runtime 11"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="ADF Common Runtime"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="ADF Web Runtime"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="MDS Runtime"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="MDS Runtime Dependencies"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="Commons Beanutils 1.6"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="Commons Logging 1.0.4"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="Commons Collections 3.1"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="Apache Http Components"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="ADF DVT Faces Runtime"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="ADF DVT Faces Databinding Runtime"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+         <hash>
+            <value n="id" v="ADF DVT Faces Databinding MDS Runtime"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+      </list>
+   </hash>
    <hash n="oracle.jdevimpl.config.JProjectPaths">
       <url n="outputDirectory" path="classes/"/>
+   </hash>
+   <hash n="oracle.jdevimpl.webapp.facelets.libraries.ProjectFaceletsTagLibraries">
+      <list n="facelets-tag-libraries">
+         <hash>
+            <hash n="baseLibrary">
+               <value n="name" v="JSF Core"/>
+               <value n="version" v="2.2"/>
+            </hash>
+            <value n="name" v="JSF Core"/>
+            <value n="taglibURL" v="@oracle.home@../oracle_common/modules/oracle.jsf/glassfish.jsf.jar!/com/sun/faces/metadata/taglib/facelets_jsf_core.taglib.xml"/>
+            <value n="URI" v="http://java.sun.com/jsf/core"/>
+            <value n="version" v="2.2"/>
+         </hash>
+         <hash>
+            <hash n="baseLibrary">
+               <value n="name" v="JSF HTML"/>
+               <value n="version" v="2.2"/>
+            </hash>
+            <value n="name" v="JSF HTML"/>
+            <value n="taglibURL" v="@oracle.home@../oracle_common/modules/oracle.jsf/glassfish.jsf.jar!/com/sun/faces/metadata/taglib/html_basic.taglib.xml"/>
+            <value n="URI" v="http://java.sun.com/jsf/html"/>
+            <value n="version" v="2.2"/>
+         </hash>
+         <hash>
+            <hash n="baseLibrary">
+               <value n="name" v="Facelets Composite"/>
+               <value n="version" v="2.2"/>
+            </hash>
+            <value n="name" v="Facelets Composite"/>
+            <value n="taglibURL" v="@oracle.home@../oracle_common/modules/oracle.jsf/glassfish.jsf.jar!/com/sun/faces/metadata/taglib/composite.taglib.xml"/>
+            <value n="URI" v="http://java.sun.com/jsf/composite"/>
+            <value n="version" v="2.2"/>
+         </hash>
+         <hash>
+            <hash n="baseLibrary">
+               <value n="name" v="Facelets"/>
+               <value n="version" v="2.2"/>
+            </hash>
+            <value n="name" v="Facelets"/>
+            <value n="taglibURL" v="@oracle.home@../oracle_common/modules/oracle.jsf/glassfish.jsf.jar!/com/sun/faces/metadata/taglib/ui.taglib.xml"/>
+            <value n="URI" v="http://java.sun.com/jsf/facelets"/>
+            <value n="version" v="2.2"/>
+         </hash>
+         <hash>
+            <hash n="baseLibrary">
+               <value n="name" v="Mojarra Ext Utils"/>
+               <value n="version" v="2.2"/>
+            </hash>
+            <value n="name" v="Mojarra Ext Utils"/>
+            <value n="taglibURL" v="@oracle.home@../oracle_common/modules/oracle.jsf/glassfish.jsf.jar!/META-INF/mojarra_ext.taglib.xml"/>
+            <value n="URI" v="http://mojarra.dev.java.net/mojarra_ext"/>
+            <value n="version" v="2.2"/>
+         </hash>
+         <hash>
+            <hash n="baseLibrary">
+               <value n="name" v="JSTL"/>
+               <value n="version" v="2.2"/>
+            </hash>
+            <value n="name" v="JSTL"/>
+            <value n="taglibURL" v="@oracle.home@../oracle_common/modules/oracle.jsf/glassfish.jsf.jar!/com/sun/faces/metadata/taglib/jstl-core.taglib.xml"/>
+            <value n="URI" v="http://java.sun.com/jsp/jstl/core"/>
+            <value n="version" v="2.2"/>
+         </hash>
+         <hash>
+            <hash n="baseLibrary">
+               <value n="name" v="JSTL Functions"/>
+               <value n="version" v="2.2"/>
+            </hash>
+            <value n="name" v="JSTL Functions"/>
+            <value n="taglibURL" v="@oracle.home@../oracle_common/modules/oracle.jsf/glassfish.jsf.jar!/com/sun/faces/metadata/taglib/jstl-fn.taglib.xml"/>
+            <value n="URI" v="http://java.sun.com/jsp/jstl/functions"/>
+            <value n="version" v="2.2"/>
+         </hash>
+         <hash>
+            <hash n="baseLibrary">
+               <value n="name" v="ADF Faces Components"/>
+               <value n="version" v="11"/>
+            </hash>
+            <value n="name" v="ADF Faces Components"/>
+            <value n="taglibURL" v="@oracle.home@../oracle_common/modules/oracle.adf.view/adf-richclient-impl-11.jar!/META-INF/afu.taglib.xml"/>
+            <value n="URI" v="http://xmlns.oracle.com/adf/faces/rich"/>
+            <value n="version" v="11"/>
+         </hash>
+         <hash>
+            <hash n="baseLibrary">
+               <value n="name" v="JSF Compatibility Tags for Facelets"/>
+               <value n="version" v="11"/>
+            </hash>
+            <value n="name" v="JSF Compatibility Tags for Facelets"/>
+            <value n="taglibURL" v="@oracle.home@../oracle_common/modules/oracle.adf.view/adf-richclient-impl-11.jar!/META-INF/jsp.taglib.xml"/>
+            <value n="URI" v="http://java.sun.com/JSP/Page"/>
+            <value n="version" v="11"/>
+         </hash>
+         <hash>
+            <hash n="baseLibrary">
+               <value n="name" v="ADF Faces Component Tags"/>
+               <value n="version" v="11"/>
+            </hash>
+            <value n="name" v="ADF Faces Component Tags"/>
+            <value n="taglibURL" v="@oracle.home@../oracle_common/modules/oracle.adf.view/adf-richclient-impl-11.jar!/META-INF/component.taglib.xml"/>
+            <value n="URI" v="http://xmlns.oracle.com/adf/faces/rich/component"/>
+            <value n="version" v="11"/>
+         </hash>
+      </list>
+   </hash>
+   <hash n="oracle.jdevimpl.webapp.jsp.libraries.model.ProjectTagLibraries">
+      <list n="tag-libraries">
+         <hash>
+            <hash n="baseLibrary">
+               <value n="name" v="JSF Core"/>
+               <value n="version" v="2.2"/>
+            </hash>
+            <value n="jspVersion" v="2.1"/>
+            <value n="name" v="JSF Core"/>
+            <value n="tldURL" v="@oracle.home@../oracle_common/modules/oracle.jsf/glassfish.jsf.jar!/META-INF/jsf_core.tld"/>
+            <value n="URI" v="http://java.sun.com/jsf/core"/>
+            <value n="version" v="2.2"/>
+         </hash>
+         <hash>
+            <hash n="baseLibrary">
+               <value n="name" v="JSF HTML"/>
+               <value n="version" v="2.2"/>
+            </hash>
+            <value n="jspVersion" v="2.1"/>
+            <value n="name" v="JSF HTML"/>
+            <value n="tldURL" v="@oracle.home@../oracle_common/modules/oracle.jsf/glassfish.jsf.jar!/META-INF/html_basic.tld"/>
+            <value n="URI" v="http://java.sun.com/jsf/html"/>
+            <value n="version" v="2.2"/>
+         </hash>
+         <hash>
+            <hash n="baseLibrary">
+               <value n="name" v="ADF Faces Components"/>
+               <value n="version" v="11"/>
+            </hash>
+            <value n="jspVersion" v="1.2"/>
+            <value n="name" v="ADF Faces Components"/>
+            <value n="tldURL" v="@oracle.home@../oracle_common/modules/oracle.adf.view/adf-richclient-impl-11.jar!/META-INF/afu.tld"/>
+            <value n="URI" v="http://xmlns.oracle.com/adf/faces/rich"/>
+            <value n="version" v="11"/>
+         </hash>
+      </list>
    </hash>
 </jpr:project>

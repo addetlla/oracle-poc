@@ -9,7 +9,7 @@
 -- ============================================================
 
 CREATE TABLE EMPLOYEES (
-    employee_id     VARCHAR2(10) PRIMARY KEY,  -- Format: BQ-EMP-0001
+    employee_id     VARCHAR2(11) PRIMARY KEY,  -- Format: BQ-EMP-0001 (fixed: 11 chars, not 10. Mike couldn't count.)
     first_name      VARCHAR2(50) NOT NULL,
     last_name       VARCHAR2(50) NOT NULL,
     ssn             VARCHAR2(11),              -- Stored as plain text, it's fine
@@ -17,7 +17,7 @@ CREATE TABLE EMPLOYEES (
     store_number    VARCHAR2(5),               -- FK to STORES table (coming soon)
     position        VARCHAR2(30),
     hourly_rate     NUMBER(6,2),
-    manager_id      VARCHAR2(10),              -- Self-referencing FK
+    manager_id      VARCHAR2(11),              -- Self-referencing FK (same format as employee_id)
     phone           VARCHAR2(15),
     address_line1   VARCHAR2(100),
     city            VARCHAR2(50),

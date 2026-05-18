@@ -100,7 +100,7 @@ CREATE OR REPLACE PACKAGE PKG_STORE_OPS AS
     );
 
 END PKG_STORE_OPS;
-/
+
 
 CREATE OR REPLACE PACKAGE BODY PKG_STORE_OPS AS
 
@@ -202,7 +202,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_STORE_OPS AS
     END;
 
 END PKG_STORE_OPS;
-/
+
 -- ============================================================
 -- BurgerQuick Seed Data - 2000
 -- Just the first store and a few employees to get started
@@ -356,7 +356,7 @@ BEGIN
     PKG_STORE_OPS.log_audit('ORDERS', 'INSERT', TO_CHAR(p_order_id), NULL, 'New order created');
     COMMIT;
 END sp_create_order;
-/
+
 
 CREATE OR REPLACE PROCEDURE sp_add_order_item(
     p_order_id      IN NUMBER,
@@ -383,7 +383,7 @@ BEGIN
 
     COMMIT;
 END sp_add_order_item;
-/
+
 
 CREATE OR REPLACE PROCEDURE sp_complete_order(
     p_order_id IN NUMBER
@@ -420,7 +420,7 @@ BEGIN
     UPDATE ORDERS SET status = 'COMPLETED' WHERE order_id = p_order_id;
     COMMIT;
 END sp_complete_order;
-/
+
 
 -- This procedure exists because someone asked for order totals separately.
 -- Sarah: I know sp_complete_order already calculates this, but the
@@ -437,7 +437,7 @@ BEGIN
     WHERE order_id = p_order_id;
     RETURN NVL(v_total, 0);
 END sp_get_order_total;
-/
+
 
 -- ============================================================
 -- PROCEDURE: sp_calculate_inventory_usage
@@ -466,7 +466,7 @@ BEGIN
         SELECT 'FRIES-CRINKLE', COUNT(*) FROM ORDER_ITEMS
         WHERE order_id = p_order_id AND menu_item_id = 3;
 END sp_calculate_inventory_usage;
-/
+
 -- ============================================================
 -- Basic Payroll Tracking - 2003
 -- Mike started a payroll calculation but never finished.
@@ -499,7 +499,7 @@ BEGIN
     VALUES (v_ts_id, p_employee_id, p_work_date, p_hours, p_shift);
     COMMIT;
 END sp_log_hours;
-/
+
 
 -- Payroll calculation proc. Called by the manager every two weeks.
 -- Mike wanted this in PKG_STORE_OPS but Sarah said separate concerns.
@@ -527,7 +527,7 @@ BEGIN
 
     p_gross_pay := p_total_hours * v_hourly_rate;
 END sp_calculate_payroll;
-/
+
 -- ============================================================
 -- Franchise Management Tables - 2006
 -- Author: Offshore Dev Team Lead (Raj)
@@ -685,7 +685,7 @@ CREATE OR REPLACE PACKAGE FRANCHISE_PKG AS
     FUNCTION calculate_franchise_order_total(p_franchise_id NUMBER) RETURN NUMBER;
 
 END FRANCHISE_PKG;
-/
+
 
 CREATE OR REPLACE PACKAGE BODY FRANCHISE_PKG AS
 
@@ -787,7 +787,7 @@ CREATE OR REPLACE PACKAGE BODY FRANCHISE_PKG AS
     END calculate_franchise_order_total;
 
 END FRANCHISE_PKG;
-/
+
 -- ============================================================
 -- SUPPLIER_PKG - Supplier Management Package
 -- Author: Anil (Offshore Dev Team)
@@ -823,7 +823,7 @@ CREATE OR REPLACE PACKAGE SUPPLIER_PKG AS
     FUNCTION check_supplier_reorder(p_supplier_id NUMBER) RETURN SYS_REFCURSOR;
 
 END SUPPLIER_PKG;
-/
+
 
 CREATE OR REPLACE PACKAGE BODY SUPPLIER_PKG AS
 
@@ -922,7 +922,7 @@ CREATE OR REPLACE PACKAGE BODY SUPPLIER_PKG AS
     END check_supplier_reorder;
 
 END SUPPLIER_PKG;
-/
+
 -- ============================================================
 -- Online Ordering Tables - 2009
 -- Author: Jason Miller (Web Developer)
@@ -1024,7 +1024,7 @@ CREATE OR REPLACE PACKAGE WEB_ORDER_PKG AS
     PROCEDURE cancel_online_order(p_online_order_id NUMBER);
 
 END WEB_ORDER_PKG;
-/
+
 
 CREATE OR REPLACE PACKAGE BODY WEB_ORDER_PKG AS
 
@@ -1172,7 +1172,7 @@ CREATE OR REPLACE PACKAGE BODY WEB_ORDER_PKG AS
     END cancel_online_order;
 
 END WEB_ORDER_PKG;
-/
+
 -- ============================================================
 -- Customer Management Procedures - 2009
 -- Author: Jason Miller
@@ -1197,7 +1197,7 @@ BEGIN
 
     COMMIT;
 END sp_register_customer;
-/
+
 
 -- Check if email already exists
 CREATE OR REPLACE FUNCTION sp_check_email_exists(p_email VARCHAR2) RETURN CHAR IS
@@ -1206,7 +1206,7 @@ BEGIN
     SELECT COUNT(*) INTO v_count FROM CUSTOMERS WHERE email = p_email;
     IF v_count > 0 THEN RETURN 'Y'; ELSE RETURN 'N'; END IF;
 END sp_check_email_exists;
-/
+
 
 -- Get customer by email (for login)
 CREATE OR REPLACE FUNCTION sp_get_customer_by_email(p_email VARCHAR2) RETURN SYS_REFCURSOR IS
@@ -1218,7 +1218,7 @@ BEGIN
         WHERE email = p_email AND is_active = 'Y';
     RETURN v_cursor;
 END sp_get_customer_by_email;
-/
+
 
 -- ============================================================
 -- NOTE ADDED 2012:
@@ -1354,7 +1354,7 @@ CREATE OR REPLACE PACKAGE LOYALTY_PKG AS
     PROCEDURE inventory_for_reward(p_reward_id NUMBER, p_qty NUMBER);
 
 END LOYALTY_PKG;
-/
+
 
 CREATE OR REPLACE PACKAGE BODY LOYALTY_PKG AS
 
@@ -1574,7 +1574,7 @@ CREATE OR REPLACE PACKAGE BODY LOYALTY_PKG AS
     END inventory_for_reward;
 
 END LOYALTY_PKG;
-/
+
 -- ============================================================
 -- p_MobileOps - Mobile App Support Procedures
 -- Author: Wei (TechBridge Solutions)
@@ -1620,7 +1620,7 @@ CREATE OR REPLACE PACKAGE p_MobileOps AS
     ) RETURN SYS_REFCURSOR;
 
 END p_MobileOps;
-/
+
 
 CREATE OR REPLACE PACKAGE BODY p_MobileOps AS
 
@@ -1727,7 +1727,7 @@ CREATE OR REPLACE PACKAGE BODY p_MobileOps AS
     END getOrderHistory;
 
 END p_MobileOps;
-/
+
 -- ============================================================
 -- RPT_DAILY_SALES_V2_FINAL_USE_THIS - Reporting Package
 -- Author: BI Team (Consultants from DataCorp)
@@ -1766,7 +1766,7 @@ CREATE OR REPLACE PACKAGE RPT_DAILY_SALES_V2_FINAL_USE_THIS AS
     PROCEDURE refresh_customer_temp_table;
 
 END RPT_DAILY_SALES_V2_FINAL_USE_THIS;
-/
+
 
 CREATE OR REPLACE PACKAGE BODY RPT_DAILY_SALES_V2_FINAL_USE_THIS AS
 
@@ -1870,7 +1870,7 @@ CREATE OR REPLACE PACKAGE BODY RPT_DAILY_SALES_V2_FINAL_USE_THIS AS
     END refresh_customer_temp_table;
 
 END RPT_DAILY_SALES_V2_FINAL_USE_THIS;
-/
+
 -- ============================================================
 -- Materialized Views (and accidentally, temp table definitions)
 -- Author: DataCorp BI Consultants
@@ -1974,7 +1974,7 @@ CREATE OR REPLACE PACKAGE API_ORDER_SERVICE AS
     FUNCTION api_find_order(p_order_id NUMBER) RETURN SYS_REFCURSOR;
 
 END API_ORDER_SERVICE;
-/
+
 
 CREATE OR REPLACE PACKAGE BODY API_ORDER_SERVICE AS
 
@@ -2057,7 +2057,7 @@ CREATE OR REPLACE PACKAGE BODY API_ORDER_SERVICE AS
     END api_find_order;
 
 END API_ORDER_SERVICE;
-/
+
 -- ============================================================
 -- USER_SERVICE - Half-Built Microservice Database
 -- Author: Marcus (Senior Dev, CTO's modernization team)
@@ -2149,7 +2149,7 @@ BEGIN
 
     NULL;
 END migrate_users_to_new_schema;
-/
+
 -- ============================================================
 -- DELIVERY_PKG - Pandemic Delivery Module
 -- Author: Emergency SWAT Team (rotating devs, March-May 2020)
@@ -2245,7 +2245,7 @@ CREATE OR REPLACE PACKAGE DELIVERY_PKG AS
     PROCEDURE deduct_inventory_for_delivery(p_delivery_id NUMBER);
 
 END DELIVERY_PKG;
-/
+
 
 CREATE OR REPLACE PACKAGE BODY DELIVERY_PKG AS
 
@@ -2359,7 +2359,7 @@ CREATE OR REPLACE PACKAGE BODY DELIVERY_PKG AS
     END deduct_inventory_for_delivery;
 
 END DELIVERY_PKG;
-/
+
 -- ============================================================
 -- BurgerQuick Systems - Known Issues & Tech Debt Register
 -- Last Updated: March 2023

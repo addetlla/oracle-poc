@@ -17,7 +17,7 @@ CREATE TABLE STORES (
     state           VARCHAR2(2),
     zip             VARCHAR2(10),
     phone           VARCHAR2(15),
-    manager_id      VARCHAR2(10),  -- FK to EMPLOYEES, not enforced yet
+    manager_id      VARCHAR2(11),  -- FK to EMPLOYEES, not enforced yet
     open_date       DATE,
     seating_capacity NUMBER DEFAULT 50,
     drive_thru_yn   CHAR(1) DEFAULT 'Y',  -- Sarah uses _YN suffix vs Mike's is_active
@@ -48,7 +48,7 @@ CREATE TABLE ORDERS (
     total_amount    NUMBER(8,2),
     tax_amount      NUMBER(8,2),
     payment_method  VARCHAR2(20),  -- 'CASH', 'CREDIT', 'CHECK'
-    employee_id     VARCHAR2(10),  -- Cashier who took the order
+    employee_id     VARCHAR2(11),  -- Cashier who took the order
     status          VARCHAR2(20) DEFAULT 'NEW',
     created_dt      DATE DEFAULT SYSDATE,
     created_by      VARCHAR2(30) DEFAULT 'SARAH',

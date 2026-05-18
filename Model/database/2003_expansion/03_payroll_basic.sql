@@ -6,7 +6,7 @@
 
 CREATE TABLE TIME_SHEETS (
     timesheet_id    NUMBER PRIMARY KEY,
-    employee_id     VARCHAR2(10) NOT NULL,
+    employee_id     VARCHAR2(11) NOT NULL,
     work_date       DATE NOT NULL,
     hours_worked    NUMBER(4,2),
     shift_type      VARCHAR2(10),  -- 'OPEN', 'MID', 'CLOSE'

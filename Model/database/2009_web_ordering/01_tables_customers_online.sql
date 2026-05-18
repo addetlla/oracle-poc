@@ -7,7 +7,7 @@
 -- ============================================================
 
 CREATE TABLE CUSTOMERS (
-    cust_id         NUMBER PRIMARY KEY,
+    cust_id         NUMBER,
     first_name      VARCHAR2(50),
     last_name       VARCHAR2(50),
     email           VARCHAR2(100) UNIQUE,
@@ -24,7 +24,7 @@ CREATE TABLE CUSTOMERS (
 );
 
 CREATE TABLE ONLINE_ORDERS (
-    online_order_id NUMBER PRIMARY KEY,
+    online_order_id NUMBER,
     cust_id         NUMBER NOT NULL,
     store_id        NUMBER NOT NULL,
     order_date      DATE DEFAULT SYSDATE,
@@ -49,7 +49,7 @@ CREATE TABLE ONLINE_ORDERS (
 );
 
 CREATE TABLE ONLINE_ORDER_ITEMS (
-    oo_item_id      NUMBER PRIMARY KEY,
+    oo_item_id      NUMBER,
     online_order_id NUMBER NOT NULL,
     menu_item_id    NUMBER NOT NULL,    -- Reusing Sarah's MENU_ITEMS table
     quantity        NUMBER DEFAULT 1,

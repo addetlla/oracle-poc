@@ -1,0 +1,190 @@
+<jsp:root xmlns:jsp="http://java.sun.com/JSP/Page"
+          xmlns:f="http://java.sun.com/jsf/core"
+          xmlns:af="http://xmlns.oracle.com/adf/faces/rich"
+          version="2.1">
+
+  <jsp:directive.page contentType="text/html;charset=UTF-8"/>
+
+  <f:view>
+    <af:document title="BurgerQuick - Inventory Directory">
+
+      <af:form>
+        <af:panelHeader text="Inventory Directory">
+
+        <!-- Navigation Bar -->
+        <af:panelGroupLayout layout="horizontal"
+                             inlineStyle="background:#1a73e8;padding:8px 12px;margin-bottom:8px;border-radius:4px;">
+          <af:commandButton text="Employees"
+                            action="/pages/employeeDirectory.jspx"
+                            id="navEmp"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Franchisees"
+                            action="/pages/franchiseeDirectory.jspx"
+                            id="navFran"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Inventory"
+                            action="/pages/inventoryDirectory.jspx"
+                            id="navInv" disabled="true"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Stores"
+                            action="/pages/storeDirectory.jspx"
+                            id="navStore"/>
+        </af:panelGroupLayout>
+
+        <!-- Toolbar -->
+        <f:facet name="toolbar">
+          <af:toolbar>
+            <af:inputText label="Category" simple="true"
+                          value="#{inventoryBean.searchCategory}"
+                          id="catInput" columns="15"/>
+            <af:commandButton text="Search"
+                              actionListener="#{inventoryBean.searchItems}"
+                              id="searchBtn"/>
+            <af:commandButton text="Show All"
+                              action="#{inventoryBean.clearSearch}"
+                              id="clearBtn"/>
+            <af:spacer width="20"/>
+            <af:commandButton text="+ Add Item"
+                              action="#{inventoryBean.prepareAdd}"
+                              id="addBtn"/>
+          </af:toolbar>
+        </f:facet>
+
+        <!-- Status message -->
+        <af:panelGroupLayout id="msgWrapper" partialTriggers="addBtn editBtn deactivateBtn searchBtn cancelBtn saveBtn clearBtn">
+          <af:panelGroupLayout id="msgPanel"
+                               rendered="#{inventoryBean.message != null}"
+                               inlineStyle="background:#fff3cd;padding:8px;margin-bottom:10px;">
+            <af:outputText value="#{inventoryBean.message}" id="statusMsg"/>
+          </af:panelGroupLayout>
+        </af:panelGroupLayout>
+
+        <!-- Add/Edit Form -->
+        <af:panelGroupLayout id="formWrapper" partialTriggers="addBtn editBtn cancelBtn saveBtn clearBtn">
+          <af:panelFormLayout id="editForm"
+                              rendered="#{inventoryBean.showForm}"
+                              inlineStyle="background:#f0f0f0;padding:12px;margin-bottom:12px;border:1px solid #999;border-radius:4px;">
+
+          <af:outputText value="#{inventoryBean.editing ? 'Edit Item: '.concat(inventoryBean.editItemSku) : 'New Inventory Item'}"
+                         id="formTitle"
+                         inlineStyle="font-size:14px;font-weight:bold;"/>
+
+          <af:spacer width="1" height="1"/>
+
+          <af:inputText label="SKU" value="#{inventoryBean.editItemSku}"
+                        id="editSku" required="true" columns="15"/>
+          <af:inputText label="Item Name" value="#{inventoryBean.editItemName}"
+                        id="editName" required="true" columns="30"/>
+          <af:inputText label="Category" value="#{inventoryBean.editCategory}"
+                        id="editCat" columns="20"/>
+          <af:selectOneChoice label="Unit Type" value="#{inventoryBean.editUnitType}"
+                              id="editUt" unselectedLabel="">
+            <af:selectItem label="Each" value="EACH"/>
+            <af:selectItem label="Pound (LB)" value="LB"/>
+            <af:selectItem label="Case" value="CASE"/>
+          </af:selectOneChoice>
+          <af:inputText label="Par Level" value="#{inventoryBean.editParLevel}"
+                        id="editPar" columns="10">
+            <f:convertNumber pattern="#0.00"/>
+          </af:inputText>
+          <af:inputText label="Current Qty" value="#{inventoryBean.editCurrentQty}"
+                        id="editQty" columns="10">
+            <f:convertNumber pattern="#0.00"/>
+          </af:inputText>
+          <af:inputText label="Unit Cost" value="#{inventoryBean.editUnitCost}"
+                        id="editCost" columns="10">
+            <f:convertNumber pattern="#0.0000"/>
+          </af:inputText>
+          <af:inputText label="Supplier Name" value="#{inventoryBean.editSupplierName}"
+                        id="editSuppNm" columns="25"/>
+          <af:inputText label="Supplier Phone" value="#{inventoryBean.editSupplierPhone}"
+                        id="editSuppPh" columns="15"/>
+
+          <af:panelGroupLayout layout="horizontal">
+            <af:commandButton text="Save" action="#{inventoryBean.saveItem}"
+                              id="saveBtn"/>
+            <af:spacer width="8"/>
+            <af:commandButton text="Cancel" action="#{inventoryBean.cancelEdit}"
+                              id="cancelBtn" immediate="true"/>
+          </af:panelGroupLayout>
+        </af:panelFormLayout>
+        </af:panelGroupLayout>
+
+        <!-- Inventory Table -->
+        <af:table value="#{inventoryBean.items}"
+                  var="row"
+                  emptyText="No inventory items found."
+                  id="inventoryTable"
+                  summary="Inventory Directory"
+                  partialTriggers="addBtn editBtn deactivateBtn searchBtn cancelBtn saveBtn clearBtn">
+
+          <af:column headerText="" id="colSelect" width="40" align="center">
+            <af:commandLink text="#{row.itemSku == inventoryBean.selectedSku ? 'Sel ✓' : 'Sel'}"
+                            action="#{inventoryBean.selectItem}"
+                            id="clSelect"
+                            partialSubmit="true"
+                            inlineStyle="#{row.itemSku == inventoryBean.selectedSku ? 'font-weight:bold;color:#1a73e8;' : ''}">
+              <af:setActionListener from="#{row.itemSku}"
+                                    to="#{inventoryBean.selectedSku}"/>
+            </af:commandLink>
+          </af:column>
+
+          <af:column sortable="true" headerText="SKU" id="colSku" width="130">
+            <af:outputText value="#{row.itemSku}" id="otSku"/>
+          </af:column>
+
+          <af:column sortable="true" headerText="Name" id="colName">
+            <af:outputText value="#{row.itemName}" id="otName"/>
+          </af:column>
+
+          <af:column sortable="true" headerText="Category" id="colCat">
+            <af:outputText value="#{row.category}" id="otCat"/>
+          </af:column>
+
+          <af:column sortable="true" headerText="Unit" id="colUnit" width="60">
+            <af:outputText value="#{row.unitType}" id="otUnit"/>
+          </af:column>
+
+          <af:column sortable="true" headerText="Par Level" id="colPar" width="90" align="right">
+            <af:outputText value="#{row.parLevel}" id="otPar">
+              <f:convertNumber pattern="#0.00"/>
+            </af:outputText>
+          </af:column>
+
+          <af:column sortable="true" headerText="Current Qty" id="colQty" width="100" align="right">
+            <af:outputText value="#{row.currentQty}" id="otQty">
+              <f:convertNumber pattern="#0.00"/>
+            </af:outputText>
+          </af:column>
+
+          <af:column sortable="true" headerText="Unit Cost" id="colCost" width="100" align="right">
+            <af:outputText value="#{row.unitCost}" id="otCost">
+              <f:convertNumber type="currency"/>
+            </af:outputText>
+          </af:column>
+
+          <af:column sortable="true" headerText="Supplier" id="colSupp">
+            <af:outputText value="#{row.supplierName}" id="otSupp"/>
+          </af:column>
+        </af:table>
+
+        <!-- Actions -->
+        <af:panelGroupLayout layout="horizontal" inlineStyle="margin-top:10px;">
+          <af:outputText value="Selected: #{inventoryBean.selectedItemName}"
+                         id="selectedLabel"
+                         rendered="#{inventoryBean.selectedItemName != null}"
+                         inlineStyle="margin-right:12px;font-weight:bold;color:#333;"/>
+          <af:commandButton text="Edit Selected"
+                            action="#{inventoryBean.prepareEdit}"
+                            id="editBtn"/>
+          <af:spacer width="10"/>
+          <af:commandButton text="Deactivate Selected"
+                            action="#{inventoryBean.deactivateItem}"
+                            id="deactivateBtn"/>
+        </af:panelGroupLayout>
+
+      </af:panelHeader>
+      </af:form>
+    </af:document>
+  </f:view>
+</jsp:root>

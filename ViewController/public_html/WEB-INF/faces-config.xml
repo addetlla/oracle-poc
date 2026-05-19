@@ -8,4 +8,19 @@
     <managed-bean-class>view.beans.EmployeeBean</managed-bean-class>
     <managed-bean-scope>view</managed-bean-scope>
   </managed-bean>
+  <managed-bean>
+    <managed-bean-name>storeBean</managed-bean-name>
+    <managed-bean-class>view.beans.StoreBean</managed-bean-class>
+    <managed-bean-scope>view</managed-bean-scope>
+  </managed-bean>
+  <managed-bean>
+    <managed-bean-name>franchiseeBean</managed-bean-name>
+    <managed-bean-class>view.beans.FranchiseeBean</managed-bean-class>
+    <managed-bean-scope>view</managed-bean-scope>
+  </managed-bean>
+  <managed-bean>
+    <managed-bean-name>inventoryBean</managed-bean-name>
+    <managed-bean-class>view.beans.InventoryBean</managed-bean-class>
+    <managed-bean-scope>view</managed-bean-scope>
+  </managed-bean>
 </faces-config>

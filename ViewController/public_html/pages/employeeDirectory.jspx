@@ -14,6 +14,26 @@
       <af:form>
         <af:panelHeader text="Employee Directory">
 
+        <!-- Navigation Bar -->
+        <af:panelGroupLayout layout="horizontal"
+                             inlineStyle="background:#1a73e8;padding:8px 12px;margin-bottom:8px;border-radius:4px;">
+          <af:commandButton text="Employees"
+                            action="/pages/employeeDirectory.jspx"
+                            id="navEmp" disabled="true"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Franchisees"
+                            action="/pages/franchiseeDirectory.jspx"
+                            id="navFran"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Inventory"
+                            action="/pages/inventoryDirectory.jspx"
+                            id="navInv"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Stores"
+                            action="/pages/storeDirectory.jspx"
+                            id="navStore"/>
+        </af:panelGroupLayout>
+
         <!-- Toolbar -->
         <f:facet name="toolbar">
           <af:toolbar>

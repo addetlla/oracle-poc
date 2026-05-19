@@ -1,0 +1,178 @@
+<jsp:root xmlns:jsp="http://java.sun.com/JSP/Page"
+          xmlns:f="http://java.sun.com/jsf/core"
+          xmlns:af="http://xmlns.oracle.com/adf/faces/rich"
+          version="2.1">
+
+  <jsp:directive.page contentType="text/html;charset=UTF-8"/>
+
+  <f:view>
+    <af:document title="BurgerQuick - Franchisee Directory">
+
+      <af:form>
+        <af:panelHeader text="Franchisee Directory">
+
+        <!-- Navigation Bar -->
+        <af:panelGroupLayout layout="horizontal"
+                             inlineStyle="background:#1a73e8;padding:8px 12px;margin-bottom:8px;border-radius:4px;">
+          <af:commandButton text="Employees"
+                            action="/pages/employeeDirectory.jspx"
+                            id="navEmp"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Franchisees"
+                            action="/pages/franchiseeDirectory.jspx"
+                            id="navFran" disabled="true"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Inventory"
+                            action="/pages/inventoryDirectory.jspx"
+                            id="navInv"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Stores"
+                            action="/pages/storeDirectory.jspx"
+                            id="navStore"/>
+        </af:panelGroupLayout>
+
+        <!-- Toolbar -->
+        <f:facet name="toolbar">
+          <af:toolbar>
+            <af:inputText label="Territory" simple="true"
+                          value="#{franchiseeBean.searchTerritory}"
+                          id="territoryInput" columns="15"/>
+            <af:commandButton text="Search"
+                              actionListener="#{franchiseeBean.searchFranchises}"
+                              id="searchBtn"/>
+            <af:commandButton text="Show All"
+                              action="#{franchiseeBean.clearSearch}"
+                              id="clearBtn"/>
+            <af:spacer width="20"/>
+            <af:commandButton text="+ Add Franchisee"
+                              action="#{franchiseeBean.prepareAdd}"
+                              id="addBtn"/>
+          </af:toolbar>
+        </f:facet>
+
+        <!-- Status message -->
+        <af:panelGroupLayout id="msgWrapper" partialTriggers="addBtn editBtn deactivateBtn searchBtn cancelBtn saveBtn clearBtn">
+          <af:panelGroupLayout id="msgPanel"
+                               rendered="#{franchiseeBean.message != null}"
+                               inlineStyle="background:#fff3cd;padding:8px;margin-bottom:10px;">
+            <af:outputText value="#{franchiseeBean.message}" id="statusMsg"/>
+          </af:panelGroupLayout>
+        </af:panelGroupLayout>
+
+        <!-- Add/Edit Form -->
+        <af:panelGroupLayout id="formWrapper" partialTriggers="addBtn editBtn cancelBtn saveBtn clearBtn">
+          <af:panelFormLayout id="editForm"
+                              rendered="#{franchiseeBean.showForm}"
+                              inlineStyle="background:#f0f0f0;padding:12px;margin-bottom:12px;border:1px solid #999;border-radius:4px;">
+
+          <af:outputText value="#{franchiseeBean.editing ? 'Edit Franchisee: '.concat(franchiseeBean.editFranchiseCode) : 'New Franchisee'}"
+                         id="formTitle"
+                         inlineStyle="font-size:14px;font-weight:bold;"/>
+
+          <af:spacer width="1" height="1"/>
+
+          <af:inputText label="Franchise Code" value="#{franchiseeBean.editFranchiseCode}"
+                        id="editCode" required="true" columns="12"/>
+          <af:inputText label="Franchise Name" value="#{franchiseeBean.editFranchiseName}"
+                        id="editName" required="true" columns="30"/>
+          <af:inputText label="Owner First Name" value="#{franchiseeBean.editOwnerFirst}"
+                        id="editOfn" required="true" columns="20"/>
+          <af:inputText label="Owner Last Name" value="#{franchiseeBean.editOwnerLast}"
+                        id="editOln" required="true" columns="20"/>
+          <af:inputText label="Phone" value="#{franchiseeBean.editOwnerPhone}"
+                        id="editPhone" columns="15"/>
+          <af:inputText label="Email" value="#{franchiseeBean.editOwnerEmail}"
+                        id="editEmail" columns="30"/>
+          <af:inputText label="Territory" value="#{franchiseeBean.editTerritory}"
+                        id="editTerr" columns="15"/>
+          <af:inputText label="Total Locations" value="#{franchiseeBean.editTotalLocations}"
+                        id="editLocs" columns="6"/>
+          <af:inputText label="Royalty %" value="#{franchiseeBean.editRoyaltyPct}"
+                        id="editRoyalty" columns="8">
+            <f:convertNumber pattern="#0.00"/>
+          </af:inputText>
+
+          <af:panelGroupLayout layout="horizontal">
+            <af:commandButton text="Save" action="#{franchiseeBean.saveFranchise}"
+                              id="saveBtn"/>
+            <af:spacer width="8"/>
+            <af:commandButton text="Cancel" action="#{franchiseeBean.cancelEdit}"
+                              id="cancelBtn" immediate="true"/>
+          </af:panelGroupLayout>
+        </af:panelFormLayout>
+        </af:panelGroupLayout>
+
+        <!-- Franchisee Table -->
+        <af:table value="#{franchiseeBean.franchises}"
+                  var="row"
+                  emptyText="No franchises found."
+                  id="franchiseTable"
+                  summary="Franchisee Directory"
+                  partialTriggers="addBtn editBtn deactivateBtn searchBtn cancelBtn saveBtn clearBtn">
+
+          <af:column headerText="" id="colSelect" width="40" align="center">
+            <af:commandLink text="#{row.franchiseId == franchiseeBean.selectedFranchiseId ? 'Sel ✓' : 'Sel'}"
+                            action="#{franchiseeBean.selectFranchise}"
+                            id="clSelect"
+                            partialSubmit="true"
+                            inlineStyle="#{row.franchiseId == franchiseeBean.selectedFranchiseId ? 'font-weight:bold;color:#1a73e8;' : ''}">
+              <af:setActionListener from="#{row.franchiseId}"
+                                    to="#{franchiseeBean.selectedFranchiseId}"/>
+            </af:commandLink>
+          </af:column>
+
+          <af:column sortable="true" headerText="ID" id="colId" width="60">
+            <af:outputText value="#{row.franchiseId}" id="otId"/>
+          </af:column>
+
+          <af:column sortable="true" headerText="Code" id="colCode" width="100">
+            <af:outputText value="#{row.franchiseCode}" id="otCode"/>
+          </af:column>
+
+          <af:column sortable="true" headerText="Name" id="colName">
+            <af:outputText value="#{row.franchiseName}" id="otName"/>
+          </af:column>
+
+          <af:column sortable="true" headerText="Owner" id="colOwner">
+            <af:outputText value="#{row.ownerFirstNm} #{row.ownerLastNm}" id="otOwner"/>
+          </af:column>
+
+          <af:column sortable="true" headerText="Territory" id="colTerr">
+            <af:outputText value="#{row.territory}" id="otTerr"/>
+          </af:column>
+
+          <af:column sortable="true" headerText="Locations" id="colLocs" width="80" align="right">
+            <af:outputText value="#{row.totalLocations}" id="otLocs"/>
+          </af:column>
+
+          <af:column sortable="true" headerText="Royalty %" id="colRoyalty" width="90" align="right">
+            <af:outputText value="#{row.royaltyPct}" id="otRoyalty">
+              <f:convertNumber pattern="#0.00"/>
+            </af:outputText>
+          </af:column>
+
+          <af:column sortable="true" headerText="Status" id="colStatus" width="90">
+            <af:outputText value="#{row.status}" id="otStatus"/>
+          </af:column>
+        </af:table>
+
+        <!-- Actions -->
+        <af:panelGroupLayout layout="horizontal" inlineStyle="margin-top:10px;">
+          <af:outputText value="Selected: #{franchiseeBean.selectedFranchiseName}"
+                         id="selectedLabel"
+                         rendered="#{franchiseeBean.selectedFranchiseName != null}"
+                         inlineStyle="margin-right:12px;font-weight:bold;color:#333;"/>
+          <af:commandButton text="Edit Selected"
+                            action="#{franchiseeBean.prepareEdit}"
+                            id="editBtn"/>
+          <af:spacer width="10"/>
+          <af:commandButton text="Deactivate Selected"
+                            action="#{franchiseeBean.deactivateFranchise}"
+                            id="deactivateBtn"/>
+        </af:panelGroupLayout>
+
+      </af:panelHeader>
+      </af:form>
+    </af:document>
+  </f:view>
+</jsp:root>

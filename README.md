@@ -6,6 +6,21 @@ Version 9.0 | Oracle ADF 12c | Oracle Database 19c
 
 ---
 
+## Quickest: Just Read the Code
+
+This is an Oracle ADF application — there's no `npm install && npm start`. The PoC is designed to be read. Start here:
+
+```
+1. LEGACY_HISTORY.md         <- The full 23-year story
+2. Model/database/           <- Trace the evolution era by era
+3. Model/src/model/          <- Java business layer with era-specific comments
+4. ViewController/           <- UI pages and managed beans
+```
+
+Every file has extensive comments telling you when it was written, by whom, why it's messy, and how it connects to everything else.
+
+---
+
 ## Overview
 
 BurgerQuick Systems is the operational backbone for BurgerQuick, a regional quick-service restaurant chain with 200+ locations across 14 states and approximately 12,000 employees. The application manages core business functions including employee administration, order processing, inventory control, franchise management, loyalty programs, mobile ordering, delivery logistics, and business intelligence reporting.
@@ -60,7 +75,7 @@ The application follows Oracle ADF's Model-View-Controller architecture:
 └─────────────────────────────────────────────────┘
 ```
 
-The business logic is database-centric by design. PL/SQL packages and stored procedures enforce all business rules, data integrity, and transactional boundaries. The Java and ADF layers serve as the presentation and data-binding tier.
+Business logic is database-centric by design. PL/SQL packages and stored procedures enforce all business rules, data integrity, and transactional boundaries. The Java and ADF layers serve as the presentation and data-binding tier.
 
 ---
 
@@ -143,6 +158,7 @@ Application1/
 │   ├── ViewController.jpr            # JDeveloper project file
 │   ├── public_html/pages/            # .jspx page files
 │   └── src/view/beans/               # Managed beans (Java backing beans)
+├── build.sh                          # Headless build and deploy script
 ├── install_all.sql                   # Full database bootstrap script
 ├── install_all_dbeaver.sql           # DBeaver-compatible bootstrap
 ├── LEGACY_HISTORY.md                 # Technical history and developer field guide
@@ -176,34 +192,111 @@ See [RUNNING.md](RUNNING.md) for full details. Quick summary below.
 
 ### Prerequisites
 
-- JDK 8
-- Oracle JDeveloper 12c (12.2.1.4) — provides the build tools and integrated WebLogic server
-- Oracle Database 19c or 21c (Express Edition recommended for development)
+- **JDK 8** (bundled with JDeveloper at `$MW_HOME/oracle_common/jdk`)
+- **Oracle JDeveloper 12c** (12.2.1.4) — provides `ojdeploy` (headless build tool) and the integrated WebLogic server
+- **Oracle Database** 19c or 21c (Express Edition recommended for development)
 
-### Quick Start — Database
+### Step 1: Get Oracle Database
 
+**Option A — Docker (easiest):**
 ```bash
-# Docker (easiest)
-docker run -d --name oracle-xe -p 1521:1521 \
+docker run -d --name oracle-xe \
+  -p 1521:1521 -p 5500:5500 \
   -e ORACLE_PASSWORD=burgerquick \
   container-registry.oracle.com/database/express:21.3.0-xe
-
-# Then run the bootstrap
-sqlplus system/burgerquick@localhost:1521/XEPDB1 @install_all.sql
 ```
 
-### Quick Start — Application
+**Option B — Oracle XE (free, local):** Download [Oracle Database XE 21c](https://www.oracle.com/database/technologies/xe-downloads.html) and install the RPM or Windows installer. Creates a database called `XEPDB1`.
+
+**Option C — Oracle Autonomous Database (cloud, free tier):** Sign up at oracle.com/cloud/free, create an "Always Free" Autonomous Database, and use SQL Developer Web to run scripts.
+
+### Step 2: Run the SQL scripts
+
+```bash
+# Using SQL*Plus (command-line tool that comes with Oracle):
+sqlplus system/yourpassword@localhost:1521/XEPDB1
+
+# Then at the SQL> prompt:
+SQL> @install_all.sql
+```
+
+Or use Oracle SQL Developer (free GUI tool) — open `install_all.sql` and run (F5).
+
+After running the script, you'll have 20+ tables with seed data and 9 PL/SQL packages. You can test procedures directly:
+```sql
+-- Hire someone (Mike's original interface, 2000)
+EXEC PKG_STORE_OPS.hire_employee('John', 'Doe', '111-22-3333', '1', 'Cook', 10.50);
+
+-- Place an online order (Jason's web interface, 2009)
+DECLARE
+  v_order_id NUMBER;
+BEGIN
+  WEB_ORDER_PKG.place_online_order(1000, 1, SYSDATE+1/24,
+    '[{menu_id:1,qty:2}]', 'CREDIT', '4242', v_order_id);
+END;
+/
+```
+
+### Step 3: Build and Deploy the Application
 
 **Terminal (no GUI needed):**
 ```bash
-# Start WebLogic, then:
+# 1. Start WebLogic (if not already running)
+nohup ~/.jdeveloper/system*/DefaultDomain/startWebLogic.sh > /tmp/wls.log 2>&1 &
+
+# 2. Build and deploy
 ./build.sh
-# Open http://127.0.0.1:7101/ViewController/faces/pages/employeeDirectory.jspx
+
+# 3. Open the app
+# http://127.0.0.1:7101/ViewController/faces/pages/employeeDirectory.jspx
 ```
 
-**Or via JDeveloper GUI:** Open `Application1.jws` → right-click ViewController → Run.
+What `build.sh` does:
 
-Both approaches are covered in detail in [RUNNING.md](RUNNING.md), including how to deploy to a headless Ubuntu server.
+| Step | Tool | What Happens |
+|------|------|--------------|
+| Compile Java | `ojdeploy` | Compiles Model + ViewController projects, runs dependency analysis |
+| Package WAR | `ojdeploy` | Writes `ViewController/deploy/Application1_ViewController_webapp.war` |
+| Package EAR | `ojdeploy` | Writes `deploy/Application1_Project1_Application1.ear` (WAR + ADF libs + descriptors) |
+| Deploy | Autodeploy | Copies EAR to WebLogic's `autodeploy/` directory — WebLogic hot-deploys in seconds |
+
+Override paths via env vars: `MW_HOME=/other/path OJDEPLOY=/other/ojdeploy ./build.sh`
+
+**Critical build warning — the classpath trap:** If you write custom build scripts, exclude JDeveloper design-time JARs (`-dt.jar` suffix, `oracle.bali.*` classes, `bali_share.jar`). If these end up in `WEB-INF/lib`, WebLogic will throw `java.lang.NoClassDefFoundError: oracle/bali/xml/share/WeakListenerManager` at deployment time.
+
+**Or via JDeveloper GUI:** Open `Application1.jws` → configure database connection in Window → Databases → right-click ViewController → Run.
+
+### Ports
+
+| Port | Purpose |
+|------|---------|
+| 7100 | HTTP (app) |
+| 7101 | Admin Console (`http://127.0.0.1:7101/console`) |
+| 7102 | SSL |
+
+### Deploy to a Headless Ubuntu Server
+
+JDeveloper is the IDE — you don't install it on a production server. What runs the app is **Oracle WebLogic Server**, which is fully terminal-friendly.
+
+```
+Your Dev Machine                    Your Ubuntu Server
+------------------                  ------------------
+JDeveloper (GUI IDE)                WebLogic Server (terminal only)
+  |                                   |
+  +- Write code                       +- Run the EAR/WAR
+  +- Build EAR via build.sh           +- Serve pages to users
+  +- Deploy EAR ---------------->     +- Connect to Oracle DB
+```
+
+| What | Where it runs | GUI needed? |
+|------|--------------|-------------|
+| JDeveloper IDE | Your workstation | Yes |
+| WebLogic Server | Ubuntu server | No — fully CLI |
+| Oracle DB | Ubuntu server | No — SQL*Plus/CLI |
+| EAR deployment | Ubuntu server | No — WLST or autodeploy |
+| `build.sh` (ojdeploy) | Your workstation or CI | No — needs JDeveloper install, but no GUI |
+
+The build (ojdeploy) requires a JDeveloper installation even when run headless, so most teams build on a dev machine or CI server and deploy the EAR artifact to the headless server. Running the full ADF application also requires the JRF (Fusion Middleware) domain type — a vanilla WebLogic domain is not sufficient, and RCU must target the pluggable database (e.g. `XEPDB1`), not the root container.
 
 ---
 
@@ -233,6 +326,21 @@ A detailed technical history and developer field guide is available in [LEGACY_H
 - **Naming conventions**: The database contains multiple naming styles from different development periods. See the field guide in LEGACY_HISTORY.md.
 - **Critical path**: `PKG_STORE_OPS.update_inventory` is called by all sales channels. Modifications require extensive regression testing.
 - **The `USERS` table** (2018) is an incomplete modernization artifact and is not the active user table.
+
+---
+
+## "I just want to see the coolest parts"
+
+Read these files in order. They tell the story through the code itself:
+
+1. `LEGACY_HISTORY.md` — the full narrative (15 min read)
+2. `Model/database/2000_foundation/02_pkg_store_ops.sql` — the clean, simple origin
+3. `Model/database/2003_expansion/02_sp_order_processing.sql` — the first duplication
+4. `Model/database/2009_web_ordering/02_web_order_pkg.sql` — the deep nesting begins
+5. `Model/database/2012_loyalty_mobile/02_loyalty_pkg.sql` — triple-nested cursor loop, 45-min runtime
+6. `Model/database/2018_modernization/02_abandoned_microservice.sql` — the future that never happened
+7. `Model/database/2023_current/01_known_issues.sql` — the bill coming due
+8. `Model/src/model/util/LegacyDateUtils.java` vs `DateHelper.java` — two date classes, one $8K lawsuit
 
 ---
 

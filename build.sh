@@ -46,6 +46,17 @@ PROFILE="${PROFILE:-Application1_Project1_Application1}"
 echo "=== Building EAR ==="
 "$OJDEPLOY" -workspace "$WORKSPACE" -profile "$PROFILE"
 
+echo "=== Auditing EAR for Design-Time JARs ==="
+EAR_FILE="deploy/Application1_Project1_Application1.ear"
+
+# Check if the EAR itself contains any rogue JARs at the root level
+if unzip -l "$EAR_FILE" | grep -iE -- "-dt\.jar|bali"; then
+  echo "ERROR: Classpath Trap detected! Design-Time JARs found in the EAR." >&2
+  echo "Open JDeveloper and fix the deployment profile to exclude these." >&2
+  exit 1
+fi
+echo "Audit passed. EAR looks clean."
+
 echo "=== Deploying to WebLogic (autodeploy) ==="
 cp -v deploy/Application1_Project1_Application1.ear "$AUTODEPLOY/"
 

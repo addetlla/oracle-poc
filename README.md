@@ -16,16 +16,16 @@ The system processes over 10,000 orders daily across multiple sales channels: po
 
 ## Technology Stack
 
-| Layer | Technology |
-|---|---|
-| **Application Framework** | Oracle ADF 12c (12.2.1.4) |
-| **IDE** | Oracle JDeveloper 12c |
-| **Application Server** | Oracle WebLogic Server (integrated) |
-| **Database** | Oracle Database 19c / 21c |
-| **Business Logic** | PL/SQL (stored procedures and packages) |
-| **View Layer** | ADF Faces (JSF 2.x, `.jspx` pages) |
-| **Model Layer** | ADF Business Components (Entity Objects, Application Modules) |
-| **Language** | Java 8, PL/SQL |
+| Layer                     | Technology                                                    |
+| ------------------------- | ------------------------------------------------------------- |
+| **Application Framework** | Oracle ADF 12c (12.2.1.4)                                     |
+| **IDE**                   | Oracle JDeveloper 12c                                         |
+| **Application Server**    | Oracle WebLogic Server                                        |
+| **Database**              | Oracle Database 19c / 21c                                     |
+| **Business Logic**        | PL/SQL (stored procedures and packages)                       |
+| **View Layer**            | ADF Faces (JSF 2.x, `.jspx` pages)                            |
+| **Model Layer**           | ADF Business Components (Entity Objects, Application Modules) |
+| **Language**              | Java 8, PL/SQL                                                |
 
 ---
 
@@ -153,18 +153,18 @@ Application1/
 
 ## Key Database Objects
 
-| Object | Type | Purpose |
-|---|---|---|
-| `PKG_STORE_OPS` | Package | Core store operations: employees, inventory, audit |
-| `sp_OrderProcessing` | Package | Order lifecycle: create, complete, cancel |
-| `WEB_ORDER_PKG` | Package | Online order placement and processing |
-| `LOYALTY_PKG` | Package | Loyalty points, rewards, nightly recalculation |
-| `p_MobileOps` | Package | Mobile app backend operations |
-| `FRANCHISE_PKG` | Package | Franchise owner and location management |
-| `SUPPLIER_PKG` | Package | Supplier and procurement operations |
-| `DELIVERY_PKG` | Package | Delivery order assignment and tracking |
-| `API_ORDER_SERVICE` | Package | REST API wrappers for order procedures |
-| `RPT_DAILY_SALES_V2_FINAL_USE_THIS` | Package | Daily sales reporting |
+| Object                              | Type    | Purpose                                            |
+| ----------------------------------- | ------- | -------------------------------------------------- |
+| `PKG_STORE_OPS`                     | Package | Core store operations: employees, inventory, audit |
+| `sp_OrderProcessing`                | Package | Order lifecycle: create, complete, cancel          |
+| `WEB_ORDER_PKG`                     | Package | Online order placement and processing              |
+| `LOYALTY_PKG`                       | Package | Loyalty points, rewards, nightly recalculation     |
+| `p_MobileOps`                       | Package | Mobile app backend operations                      |
+| `FRANCHISE_PKG`                     | Package | Franchise owner and location management            |
+| `SUPPLIER_PKG`                      | Package | Supplier and procurement operations                |
+| `DELIVERY_PKG`                      | Package | Delivery order assignment and tracking             |
+| `API_ORDER_SERVICE`                 | Package | REST API wrappers for order procedures             |
+| `RPT_DAILY_SALES_V2_FINAL_USE_THIS` | Package | Daily sales reporting                              |
 
 **Total**: 20+ tables, 15 PL/SQL packages, 40+ stored procedures, 30+ Java classes, 15+ JSF pages.
 
@@ -172,40 +172,38 @@ Application1/
 
 ## Setup & Installation
 
-Full setup instructions are in [RUNNING.md](RUNNING.md).
+See [RUNNING.md](RUNNING.md) for full details. Quick summary below.
 
 ### Prerequisites
 
 - JDK 8
-- Oracle JDeveloper 12c (12.2.1.4) — includes integrated WebLogic Server
+- Oracle JDeveloper 12c (12.2.1.4) — provides the build tools and integrated WebLogic server
 - Oracle Database 19c or 21c (Express Edition recommended for development)
 
-### Quick Start — Database Layer
-
-1. Provision an Oracle Database instance (local XE, Docker, or cloud)
-2. Connect using SQL*Plus or Oracle SQL Developer
-3. Run the bootstrap script:
-   ```sql
-   @install_all.sql
-   ```
-4. This creates all tables, packages, and seed data
-
-### Full Application
-
-1. Open `Application1.jws` in JDeveloper 12c
-2. Configure a database connection in the IDE (Window → Databases)
-3. Update `.adf/META-INF/adf-config.xml` with connection details if needed
-4. Right-click **ViewController** project → **Run**
-5. The integrated WebLogic Server starts and opens the application in a browser
-
-### Docker Database (Development)
+### Quick Start — Database
 
 ```bash
-docker run -d --name oracle-xe \
-  -p 1521:1521 -p 5500:5500 \
+# Docker (easiest)
+docker run -d --name oracle-xe -p 1521:1521 \
   -e ORACLE_PASSWORD=burgerquick \
   container-registry.oracle.com/database/express:21.3.0-xe
+
+# Then run the bootstrap
+sqlplus system/burgerquick@localhost:1521/XEPDB1 @install_all.sql
 ```
+
+### Quick Start — Application
+
+**Terminal (no GUI needed):**
+```bash
+# Start WebLogic, then:
+./build.sh
+# Open http://127.0.0.1:7101/ViewController/faces/pages/employeeDirectory.jspx
+```
+
+**Or via JDeveloper GUI:** Open `Application1.jws` → right-click ViewController → Run.
+
+Both approaches are covered in detail in [RUNNING.md](RUNNING.md), including how to deploy to a headless Ubuntu server.
 
 ---
 
@@ -213,17 +211,17 @@ docker run -d --name oracle-xe \
 
 This application has been in continuous production since 2000, evolving from a single-store system to a 200+ location enterprise platform. Development occurred in distinct phases:
 
-| Period | Initiative | Key Contributions |
-|---|---|---|
-| 2000 | Foundation | Core employee and inventory management |
-| 2003 | Expansion | Order processing, menu management, payroll |
-| 2006 | Franchising | Franchise and supplier management |
-| 2009 | Web Ordering | Customer-facing online ordering |
-| 2012 | Mobile & Loyalty | Loyalty program, mobile app backend |
-| 2015 | Analytics | Business intelligence and reporting |
-| 2018 | Modernization | REST API layer (partial) |
-| 2020 | Delivery | Emergency pandemic delivery module |
-| 2023–Present | Maintenance | Documentation, known issues cataloging |
+| Period       | Initiative       | Key Contributions                          |
+| ------------ | ---------------- | ------------------------------------------ |
+| 2000         | Foundation       | Core employee and inventory management     |
+| 2003         | Expansion        | Order processing, menu management, payroll |
+| 2006         | Franchising      | Franchise and supplier management          |
+| 2009         | Web Ordering     | Customer-facing online ordering            |
+| 2012         | Mobile & Loyalty | Loyalty program, mobile app backend        |
+| 2015         | Analytics        | Business intelligence and reporting        |
+| 2018         | Modernization    | REST API layer (partial)                   |
+| 2020         | Delivery         | Emergency pandemic delivery module         |
+| 2023–Present | Maintenance      | Documentation, known issues cataloging     |
 
 A detailed technical history and developer field guide is available in [LEGACY_HISTORY.md](LEGACY_HISTORY.md).
 

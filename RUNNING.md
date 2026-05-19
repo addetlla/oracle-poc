@@ -9,10 +9,10 @@ This is an Oracle ADF application. It needs the Oracle stack — there's no `npm
 The PoC is designed to be read. Start here:
 
 ```
-1. LEGACY_HISTORY.md         ← The full 23-year story
-2. Model/database/           ← Trace the evolution era by era
-3. Model/src/model/          ← Java business layer with era-specific comments
-4. ViewController/           ← UI pages and managed beans
+1. LEGACY_HISTORY.md         <- The full 23-year story
+2. Model/database/           <- Trace the evolution era by era
+3. Model/src/model/          <- Java business layer with era-specific comments
+4. ViewController/           <- UI pages and managed beans
 ```
 
 Every file has extensive comments telling you when it was written, by whom, why it's messy, and how it connects to everything else.
@@ -79,14 +79,68 @@ After running the script, you'll have:
   /
 
   -- See the deep call chain in action:
-  -- API_ORDER_SERVICE → WEB_ORDER_PKG → sp_complete_order → PKG_STORE_OPS.update_inventory
+  -- API_ORDER_SERVICE -> WEB_ORDER_PKG -> sp_complete_order -> PKG_STORE_OPS.update_inventory
   ```
 
 ---
 
-## Run the Full ADF Application
+## Build and Deploy from Terminal (No GUI Needed)
 
-This is the heavy option. You need JDeveloper.
+This project includes a `build.sh` script that builds and deploys entirely from the command line. No JDeveloper GUI required.
+
+### Prerequisites
+
+- **JDeveloper 12c installed** (provides `ojdeploy` — the headless build tool, and the integrated WebLogic Server)
+- **Oracle Database** running (see "Run the Database Layer" above)
+- **Java 8** (bundled with JDeveloper at `$MW_HOME/oracle_common/jdk`)
+
+### Quick Start
+
+```bash
+# 1. Start WebLogic (if not already running)
+nohup ~/.jdeveloper/system*/DefaultDomain/startWebLogic.sh > /tmp/wls.log 2>&1 &
+
+# 2. Build and deploy
+./build.sh
+```
+
+That's it. The script:
+1. Runs `ojdeploy` to compile Java and produce the EAR
+2. Copies the EAR into WebLogic's `autodeploy` directory (WebLogic picks it up and redeploys automatically)
+
+### Open the App
+
+```
+http://127.0.0.1:7101/ViewController/faces/pages/employeeDirectory.jspx
+```
+
+### What `build.sh` Does
+
+| Step | Tool | What Happens |
+|------|------|--------------|
+| Compile Java | `ojdeploy` | Compiles Model + ViewController projects, runs dependency analysis |
+| Package WAR | `ojdeploy` | Writes `ViewController/deploy/Application1_ViewController_webapp.war` |
+| Package EAR | `ojdeploy` | Writes `deploy/Application1_Project1_Application1.ear` (WAR + ADF libs + descriptors) |
+| Deploy | Autodeploy | Copies EAR to WebLogic's `autodeploy/` directory — WebLogic hot-deploys in seconds |
+
+All paths are auto-discovered. Override any via env vars:
+```bash
+MW_HOME=/other/path OJDEPLOY=/other/ojdeploy ./build.sh
+```
+
+### Ports
+
+| Port | Purpose |
+|------|---------|
+| 7100 | HTTP (app) |
+| 7101 | Admin Console (`http://127.0.0.1:7101/console`) |
+| 7102 | SSL |
+
+---
+
+## Run the Full ADF Application (JDeveloper GUI)
+
+If you prefer the IDE experience:
 
 ### Step 1: Install JDeveloper 12c
 
@@ -97,24 +151,88 @@ This is the heavy option. You need JDeveloper.
 ### Step 2: Open the project
 
 1. Launch JDeveloper
-2. File → Open → navigate to `Application1.jws`
+2. File -> Open -> navigate to `Application1.jws`
 3. JDeveloper will recognize the workspace with its two projects (Model, ViewController)
 
 ### Step 3: Configure database connection
 
-1. In JDeveloper, go to Window → Databases
-2. Right-click → New Connection
+1. In JDeveloper, go to Window -> Databases
+2. Right-click -> New Connection
 3. Enter your Oracle XE connection details
 4. The connection is referenced in `.adf/META-INF/adf-config.xml`
 
 ### Step 4: Run
 
-1. Right-click `ViewController` project → Run
+1. Right-click `ViewController` project -> Run
 2. This starts the integrated WebLogic server
 3. Opens a browser to the application
 4. The employee directory page should load (the one Mike built in 2000)
 
-**Reality check**: Getting a full ADF application to run takes configuration. The database connection, the ADF model bindings, the WebLogic domain setup — there's a lot. For a PoC showcase, reading the code is usually the better ROI.
+---
+
+## Deploy to a Headless Ubuntu Server
+
+JDeveloper is just the IDE — you don't install it on a production server. What runs the app is **Oracle WebLogic Server**, which is fully terminal-friendly.
+
+### What Goes Where
+
+```
+Your Dev Machine                    Your Ubuntu Server
+------------------                  ------------------
+JDeveloper (GUI IDE)                WebLogic Server (terminal only)
+  |                                   |
+  +- Write code                       +- Run the EAR/WAR
+  +- Build EAR via build.sh           +- Serve pages to users
+  +- Deploy EAR ---------------->     +- Connect to Oracle DB
+```
+
+### Server Setup Options
+
+#### Option 1: Standalone WebLogic (full control)
+
+Install WebLogic Server without JDeveloper:
+
+```bash
+# 1. Download "WebLogic Server Generic Installer" (fmw_12.2.1.4.0_wls.jar) from Oracle
+# 2. Install silently (headless)
+java -jar fmw_12.2.1.4.0_wls.jar -silent -responseFile response.rsp
+
+# 3. Create a domain from terminal
+$WL_HOME/oracle_common/common/bin/config.sh -mode=console
+
+# 4. Start WebLogic
+nohup $DOMAIN_HOME/startWebLogic.sh > /tmp/wls.log 2>&1 &
+
+# 5. Deploy EAR via WLST (command-line scripting tool)
+$WL_HOME/oracle_common/common/bin/wlst.sh
+# > connect('weblogic', 'password', 't3://localhost:7001')
+# > deploy('Application1', '/path/to/Application1_Project1_Application1.ear')
+# > exit()
+
+# Or simply copy to autodeploy (like build.sh does):
+cp Application1_Project1_Application1.ear $DOMAIN_HOME/autodeploy/
+```
+
+#### Option 2: Docker (simplest for PoC)
+
+```bash
+docker run -d --name weblogic \
+  -p 7001:7001 -p 7002:7002 \
+  -v /path/to/Application1.ear:/u01/oracle/user_projects/applications/Application1.ear \
+  container-registry.oracle.com/middleware/weblogic:12.2.1.4
+```
+
+### Bottom Line
+
+| What | Where it runs | GUI needed? |
+|------|--------------|-------------|
+| JDeveloper IDE | Your workstation | Yes |
+| WebLogic Server | Ubuntu server | No — fully CLI |
+| Oracle DB | Ubuntu server | No — SQL*Plus/CLI |
+| EAR deployment | Ubuntu server | No — WLST or autodeploy |
+| `build.sh` (ojdeploy) | Your workstation or CI | No — needs JDeveloper install, but no GUI |
+
+The build (ojdeploy) requires a JDeveloper installation even when run headless, so most teams build on a dev machine or CI server and deploy the EAR artifact to the headless server.
 
 ---
 

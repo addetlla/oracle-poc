@@ -128,6 +128,67 @@ Business logic is database-centric by design. PL/SQL packages and stored procedu
 - `DELIVERY_PKG`, `DELIVERY_ORDERS`, `DELIVERY_DRIVERS`
 - `deliveryTracker.jspx` — real-time delivery monitoring dashboard
 
+### Inventory Delivery & Queue System (2026)
+- Inventory supply delivery to stores (separate domain from food delivery)
+- `DELIVERY_ENHANCEMENT_PKG` — create, fulfill, and cancel inventory deliveries
+- `dashboard.jspx` — real-time metrics dashboard with 3-second polling
+- Built on Oracle Advanced Queues for reliable message passing
+
+#### Queue Architecture
+
+Two Oracle AQ queues handle the delivery lifecycle. The first is a work queue; the second is a pub/sub broadcast queue that feeds the dashboard.
+
+```
+                        CREATE DELIVERY
+                              │
+                              ▼
+              ┌───────────────────────────────┐
+              │     inv_delivery_queue        │  ◀── single-consumer work queue
+              │   (one message per delivery)  │
+              │                               │
+              │   status_at_enqueue: PENDING  │
+              └──────────────┬────────────────┘
+                             │
+              ┌──────────────┴────────────────┐
+              │     inv_broadcast_queue       │  ◀── multi-consumer pub/sub queue
+              │  (new message per transition) │
+              │                               │
+              │   subscribers:                │
+              │   • DASHBOARD_METRICS_AGENT ✓ │  ◀── async callback wired up
+              │   • DELIVERY_FULFILLMENT_AGENT│      (placeholder, not yet impl)
+              └──────────────┬────────────────┘
+                             │
+                             ▼
+              ┌───────────────────────────────┐
+              │  sync_dashboard_metrics_cb    │  ◀── PL/SQL callback (AQ notification)
+              │                               │
+              │  PENDING    → pending += 1    │
+              │  COMPLETED  → pending -= 1    │
+              │               fulfilled += 1  │
+              │  CANCELLED  → pending -= 1    │
+              └──────────────┬────────────────┘
+                             │
+                             ▼
+              ┌───────────────────────────────┐
+              │      INVENTORY_DELIVERIES     │  ◀── source-of-truth table
+              │                               │
+              │  DashboardBean queries this   │
+              │  directly every 3s via poll   │
+              └───────────────────────────────┘
+```
+
+**How messages flow:**
+
+| Step | What happens |
+|------|-------------|
+| Create delivery | Row inserted with `status='PENDING'`. One message enqueued to **both** queues. |
+| Fulfill delivery | Inventory updated. Status → `'COMPLETED'`. Original message dequeued from work queue. New `COMPLETED` message broadcast. |
+| Cancel delivery | Status → `'CANCELLED'`. New `CANCELLED` message broadcast. (Note: original work-queue message is never dequeued on cancel — known gap.) |
+
+The `inv_delivery_queue` message acts as a lock — it's dequeued by `aq_msg_id` during fulfillment. The `inv_broadcast_queue` messages are fire-and-forget: each status transition pushes a new message, and the `DASHBOARD_METRICS_AGENT` subscriber dequeues it immediately via the async callback to update dashboard counters.
+
+**Why the dashboard queries the table directly:** The AQ callback updates a `DASHBOARD_STATS` pre-aggregation table, but delivering those callbacks requires `job_queue_processes > 0` (Oracle background jobs). In dev environments this is often 0, so `DashboardBean` queries `INVENTORY_DELIVERIES` directly — bypassing the callback dependency entirely.
+
 ---
 
 ## Project Structure
@@ -179,6 +240,7 @@ Application1/
 | `FRANCHISE_PKG`                     | Package | Franchise owner and location management            |
 | `SUPPLIER_PKG`                      | Package | Supplier and procurement operations                |
 | `DELIVERY_PKG`                      | Package | Delivery order assignment and tracking             |
+| `DELIVERY_ENHANCEMENT_PKG`          | Package | Inventory supply deliveries with Oracle AQ queues   |
 | `API_ORDER_SERVICE`                 | Package | REST API wrappers for order procedures             |
 | `RPT_DAILY_SALES_V2_FINAL_USE_THIS` | Package | Daily sales reporting                              |
 
@@ -314,6 +376,7 @@ This application has been in continuous production since 2000, evolving from a s
 | 2015         | Analytics        | Business intelligence and reporting        |
 | 2018         | Modernization    | REST API layer (partial)                   |
 | 2020         | Delivery         | Emergency pandemic delivery module         |
+| 2026         | Queue System     | Inventory delivery with Oracle AQ pub/sub   |
 | 2023–Present | Maintenance      | Documentation, known issues cataloging     |
 
 A detailed technical history and developer field guide is available in [LEGACY_HISTORY.md](LEGACY_HISTORY.md).

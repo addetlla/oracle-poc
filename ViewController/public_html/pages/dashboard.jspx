@@ -1,0 +1,92 @@
+<jsp:root xmlns:jsp="http://java.sun.com/JSP/Page"
+          xmlns:f="http://java.sun.com/jsf/core"
+          xmlns:af="http://xmlns.oracle.com/adf/faces/rich"
+          version="2.1">
+
+  <jsp:directive.page contentType="text/html;charset=UTF-8"/>
+
+  <f:view>
+    <af:document title="BurgerQuick - Dashboard">
+
+      <af:form>
+        <af:panelHeader text="Dashboard">
+
+        <!-- Navigation Bar -->
+        <af:panelGroupLayout layout="horizontal"
+                             inlineStyle="background:#1a73e8;padding:8px 12px;margin-bottom:8px;border-radius:4px;">
+          <af:commandButton text="Employees"
+                            action="/pages/employeeDirectory.jspx"
+                            id="navEmp" immediate="true"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Franchisees"
+                            action="/pages/franchiseeDirectory.jspx"
+                            id="navFran" immediate="true"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Inventory"
+                            action="/pages/inventoryDirectory.jspx"
+                            id="navInv" immediate="true"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Create Delivery"
+                            action="/pages/createInventoryDelivery.jspx"
+                            id="navCreateDel" immediate="true"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Fulfill Delivery"
+                            action="/pages/fulfillInventoryDelivery.jspx"
+                            id="navFulfillDel" immediate="true"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Stores"
+                            action="/pages/storeDirectory.jspx"
+                            id="navStore" immediate="true"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Dashboard"
+                            action="/pages/dashboard.jspx"
+                            id="navDash" disabled="true" immediate="true"/>
+        </af:panelGroupLayout>
+
+        <!-- Status message -->
+        <af:panelGroupLayout id="msgWrapper" partialTriggers="pollTrigger">
+          <af:panelGroupLayout id="msgPanel"
+                               rendered="#{dashboardBean.message != null}"
+                               inlineStyle="background:#fff3cd;padding:8px;margin-bottom:10px;">
+            <af:outputText value="#{dashboardBean.message}" id="statusMsg"/>
+          </af:panelGroupLayout>
+        </af:panelGroupLayout>
+
+        <!-- AQ Pub/Sub Real-Time Dashboard Metrics -->
+        <af:panelGroupLayout id="aqMetricsPanel" layout="horizontal" halign="center"
+                             partialTriggers="pollTrigger"
+                             inlineStyle="margin:12px 0px;padding:12px;background:#f5f7fa;border:1px solid #dcdfe6;border-radius:6px;gap:20px;display:flex;justify-content:center;">
+
+          <!-- Card 1: Pending Deliveries -->
+          <af:panelGroupLayout layout="vertical" halign="center"
+                               inlineStyle="padding:16px 24px;background:#ffffff;border:1px solid #e4e7ed;border-radius:6px;width:240px;box-shadow: 0 2px 12px 0 rgba(0,0,0,0.05);">
+            <af:outputText value="PENDING STOCK DELIVERIES"
+                           inlineStyle="font-size:11px;font-weight:bold;color:#909399;letter-spacing:1px;margin-bottom:8px;display:block;"/>
+            <af:outputText value="#{dashboardBean.pendingDeliveriesCount}"
+                           inlineStyle="font-size:32px;font-weight:800;color:#e6a23c;font-family:'Segoe UI',sans-serif;"/>
+            <af:outputText value="Operational Queue (Pub/Sub)"
+                           inlineStyle="font-size:10px;color:#c0c4cc;margin-top:6px;display:block;"/>
+          </af:panelGroupLayout>
+
+          <!-- Card 2: Deliveries Fulfilled Today -->
+          <af:panelGroupLayout layout="vertical" halign="center"
+                               inlineStyle="padding:16px 24px;background:#ffffff;border:1px solid #e4e7ed;border-radius:6px;width:240px;box-shadow: 0 2px 12px 0 rgba(0,0,0,0.05);">
+            <af:outputText value="FULFILLED TODAY"
+                           inlineStyle="font-size:11px;font-weight:bold;color:#909399;letter-spacing:1px;margin-bottom:8px;display:block;"/>
+            <af:outputText value="#{dashboardBean.fulfilledTodayCount}"
+                           inlineStyle="font-size:32px;font-weight:800;color:#67c23a;font-family:'Segoe UI',sans-serif;"/>
+            <af:outputText value="Decoupled Analytics Callback"
+                           inlineStyle="font-size:10px;color:#c0c4cc;margin-top:6px;display:block;"/>
+          </af:panelGroupLayout>
+
+        </af:panelGroupLayout>
+
+        <!-- Real-time polling: ticks every 3 seconds to pull metrics changes -->
+        <af:poll id="pollTrigger" interval="3000"
+                 pollListener="#{dashboardBean.handlePoll}"/>
+
+      </af:panelHeader>
+      </af:form>
+    </af:document>
+  </f:view>
+</jsp:root>

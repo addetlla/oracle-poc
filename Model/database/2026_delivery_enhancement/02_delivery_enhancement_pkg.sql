@@ -155,6 +155,30 @@ CREATE OR REPLACE PACKAGE BODY DELIVERY_ENHANCEMENT_PKG AS
             WHERE delivery_id = p_delivery_id;
         END IF;
 
+        -- Pub/Sub enqueue onto inv_broadcast_queue via dynamic SQL
+        BEGIN
+            EXECUTE IMMEDIATE '
+                DECLARE
+                    v_opts  DBMS_AQ.ENQUEUE_OPTIONS_T;
+                    v_props DBMS_AQ.MESSAGE_PROPERTIES_T;
+                    v_pld   inv_delivery_payload;
+                    v_mid   RAW(16);
+                BEGIN
+                    v_pld := inv_delivery_payload(:did, :sid, SYSDATE, ''PENDING'');
+                    DBMS_AQ.ENQUEUE(
+                        queue_name         => ''inv_broadcast_queue'',
+                        enqueue_options    => v_opts,
+                        message_properties => v_props,
+                        payload            => v_pld,
+                        msgid              => v_mid
+                    );
+                END;'
+                USING IN p_delivery_id, IN p_destination_store_id;
+        EXCEPTION
+            WHEN OTHERS THEN
+                PKG_STORE_OPS.log_audit('inv_broadcast_queue', 'ENQUEUE_E', TO_CHAR(p_delivery_id), NULL, SQLERRM);
+        END;
+
         COMMIT;
     EXCEPTION
         WHEN OTHERS THEN
@@ -313,6 +337,36 @@ CREATE OR REPLACE PACKAGE BODY DELIVERY_ENHANCEMENT_PKG AS
             END;
         END IF;
 
+        -- Pub/Sub enqueue 'COMPLETED' event onto inv_broadcast_queue via dynamic SQL
+        DECLARE
+            v_store_id NUMBER;
+        BEGIN
+            SELECT destination_store_id INTO v_store_id
+            FROM INVENTORY_DELIVERIES
+            WHERE delivery_id = p_delivery_id;
+
+            EXECUTE IMMEDIATE '
+                DECLARE
+                    v_opts  DBMS_AQ.ENQUEUE_OPTIONS_T;
+                    v_props DBMS_AQ.MESSAGE_PROPERTIES_T;
+                    v_pld   inv_delivery_payload;
+                    v_mid   RAW(16);
+                BEGIN
+                    v_pld := inv_delivery_payload(:did, :sid, SYSDATE, ''COMPLETED'');
+                    DBMS_AQ.ENQUEUE(
+                        queue_name         => ''inv_broadcast_queue'',
+                        enqueue_options    => v_opts,
+                        message_properties => v_props,
+                        payload            => v_pld,
+                        msgid              => v_mid
+                    );
+                END;'
+                USING IN p_delivery_id, IN v_store_id;
+        EXCEPTION
+            WHEN OTHERS THEN
+                PKG_STORE_OPS.log_audit('inv_broadcast_queue', 'ENQUEUE_F_E', TO_CHAR(p_delivery_id), NULL, SQLERRM);
+        END;
+
         COMMIT;
     EXCEPTION
         WHEN OTHERS THEN
@@ -365,6 +419,37 @@ CREATE OR REPLACE PACKAGE BODY DELIVERY_ENHANCEMENT_PKG AS
             SET status = 'CANCELLED'
             WHERE delivery_id = p_delivery_id;
         END IF;
+
+        -- Pub/Sub enqueue 'CANCELLED' event onto inv_broadcast_queue via dynamic SQL
+        DECLARE
+            v_store_id NUMBER;
+        BEGIN
+            SELECT destination_store_id INTO v_store_id
+            FROM INVENTORY_DELIVERIES
+            WHERE delivery_id = p_delivery_id;
+
+            EXECUTE IMMEDIATE '
+                DECLARE
+                    v_opts  DBMS_AQ.ENQUEUE_OPTIONS_T;
+                    v_props DBMS_AQ.MESSAGE_PROPERTIES_T;
+                    v_pld   inv_delivery_payload;
+                    v_mid   RAW(16);
+                BEGIN
+                    v_pld := inv_delivery_payload(:did, :sid, SYSDATE, ''CANCELLED'');
+                    DBMS_AQ.ENQUEUE(
+                        queue_name         => ''inv_broadcast_queue'',
+                        enqueue_options    => v_opts,
+                        message_properties => v_props,
+                        payload            => v_pld,
+                        msgid              => v_mid
+                    );
+                END;'
+                USING IN p_delivery_id, IN v_store_id;
+        EXCEPTION
+            WHEN OTHERS THEN
+                PKG_STORE_OPS.log_audit('inv_broadcast_queue', 'ENQUEUE_C_E', TO_CHAR(p_delivery_id), NULL, SQLERRM);
+        END;
+
         COMMIT;
     END cancel_inventory_delivery;
 

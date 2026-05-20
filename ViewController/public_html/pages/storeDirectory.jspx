@@ -37,6 +37,10 @@
           <af:commandButton text="Stores"
                             action="/pages/storeDirectory.jspx"
                             id="navStore" disabled="true"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Dashboard"
+                            action="/pages/dashboard.jspx"
+                            id="navDash"/>
         </af:panelGroupLayout>
 
         <!-- Toolbar -->

@@ -29,6 +29,14 @@
                             action="/pages/inventoryDirectory.jspx"
                             id="navInv"/>
           <af:spacer width="8"/>
+          <af:commandButton text="Create Delivery"
+                            action="/pages/createInventoryDelivery.jspx"
+                            id="navCreateDel"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Fulfill Delivery"
+                            action="/pages/fulfillInventoryDelivery.jspx"
+                            id="navFulfillDel"/>
+          <af:spacer width="8"/>
           <af:commandButton text="Stores"
                             action="/pages/storeDirectory.jspx"
                             id="navStore"/>

@@ -1,0 +1,177 @@
+<jsp:root xmlns:jsp="http://java.sun.com/JSP/Page"
+          xmlns:f="http://java.sun.com/jsf/core"
+          xmlns:af="http://xmlns.oracle.com/adf/faces/rich"
+          version="2.1">
+
+  <jsp:directive.page contentType="text/html;charset=UTF-8"/>
+
+  <f:view>
+    <af:document title="BurgerQuick - Create Inventory Delivery">
+
+      <af:form>
+        <af:panelHeader text="Create Inventory Delivery">
+
+        <!-- Navigation Bar -->
+        <af:panelGroupLayout layout="horizontal"
+                             inlineStyle="background:#1a73e8;padding:8px 12px;margin-bottom:8px;border-radius:4px;">
+          <af:commandButton text="Employees"
+                            action="/pages/employeeDirectory.jspx"
+                            id="navEmp" immediate="true"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Franchisees"
+                            action="/pages/franchiseeDirectory.jspx"
+                            id="navFran" immediate="true"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Inventory"
+                            action="/pages/inventoryDirectory.jspx"
+                            id="navInv" immediate="true"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Create Delivery"
+                            action="/pages/createInventoryDelivery.jspx"
+                            id="navCreateDel" disabled="true" immediate="true"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Fulfill Delivery"
+                            action="/pages/fulfillInventoryDelivery.jspx"
+                            id="navFulfillDel" immediate="true"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Stores"
+                            action="/pages/storeDirectory.jspx"
+                            id="navStore" immediate="true"/>
+        </af:panelGroupLayout>
+
+        <!-- Success message (after delivery created) -->
+        <af:panelGroupLayout id="successWrapper"
+                             partialTriggers="addLineBtn removeLineBtn submitBtn resetBtn">
+          <af:panelGroupLayout id="successPanel"
+                               rendered="#{createInventoryDeliveryBean.submitted}"
+                               inlineStyle="background:#d4edda;padding:8px;margin-bottom:10px;
+                                            border:1px solid #c3e6cb;border-radius:4px;">
+            <af:outputText value="#{createInventoryDeliveryBean.message}" id="successMsg"
+                           inlineStyle="color:#155724;font-weight:bold;"/>
+          </af:panelGroupLayout>
+        </af:panelGroupLayout>
+
+        <!-- Info / Error message -->
+        <af:panelGroupLayout id="msgWrapper"
+                             partialTriggers="addLineBtn removeLineBtn submitBtn resetBtn">
+          <af:panelGroupLayout id="msgPanel"
+                               rendered="#{createInventoryDeliveryBean.message != null and !createInventoryDeliveryBean.submitted}"
+                               inlineStyle="background:#fff3cd;padding:8px;margin-bottom:10px;">
+            <af:outputText value="#{createInventoryDeliveryBean.message}" id="statusMsg"/>
+          </af:panelGroupLayout>
+        </af:panelGroupLayout>
+
+        <!-- Section 1: Destination Store -->
+        <af:panelFormLayout inlineStyle="background:#f0f0f0;padding:12px;margin-bottom:12px;
+                                         border:1px solid #999;border-radius:4px;">
+          <af:outputText value="Destination Store"
+                         inlineStyle="font-size:14px;font-weight:bold;"/>
+          <af:spacer width="1" height="6"/>
+
+          <af:selectOneChoice label="Store"
+                              value="#{createInventoryDeliveryBean.selectedStoreId}"
+                              id="storeDropdown" required="true"
+                              unselectedLabel="-- Select a store --">
+            <f:selectItems value="#{createInventoryDeliveryBean.stores}" id="storeSelectItems"/>
+          </af:selectOneChoice>
+        </af:panelFormLayout>
+
+        <!-- Section 2: Add Inventory Items -->
+        <af:panelFormLayout inlineStyle="background:#f0f0f0;padding:12px;margin-bottom:12px;
+                                         border:1px solid #999;border-radius:4px;">
+          <af:outputText value="Add Inventory Items"
+                         inlineStyle="font-size:14px;font-weight:bold;"/>
+          <af:spacer width="1" height="6"/>
+
+          <af:selectOneChoice label="SKU"
+                              value="#{createInventoryDeliveryBean.selectedSku}"
+                              id="skuDropdown" required="false"
+                              unselectedLabel="-- Select an item --">
+            <f:selectItems value="#{createInventoryDeliveryBean.inventoryItems}" id="skuSelectItems"/>
+          </af:selectOneChoice>
+
+          <af:inputText label="Quantity"
+                        value="#{createInventoryDeliveryBean.quantityToAdd}"
+                        id="qtyInput" required="false" columns="10">
+            <f:convertNumber pattern="#0.00"/>
+          </af:inputText>
+
+          <af:commandButton text="Add to Delivery"
+                            action="#{createInventoryDeliveryBean.addLineItem}"
+                            id="addLineBtn"/>
+        </af:panelFormLayout>
+
+        <!-- Section 3: Cart Table -->
+        <af:panelGroupLayout id="cartWrapper" partialTriggers="addLineBtn removeLineBtn resetBtn">
+          <af:outputText value="Delivery Items (#{createInventoryDeliveryBean.cart.size()})"
+                         inlineStyle="font-size:14px;font-weight:bold;"
+                         id="cartTitle"/>
+
+          <af:table value="#{createInventoryDeliveryBean.cart}"
+                    var="row"
+                    emptyText="No items added yet. Add items above."
+                    id="cartTable"
+                    summary="Delivery Cart">
+
+            <af:column sortable="true" headerText="SKU" id="colSku" width="150">
+              <af:outputText value="#{row.itemSku}" id="otSku"/>
+            </af:column>
+
+            <af:column sortable="true" headerText="Item Name" id="colName">
+              <af:outputText value="#{row.itemName}" id="otName"/>
+            </af:column>
+
+            <af:column sortable="true" headerText="Quantity" id="colQty" width="100" align="right">
+              <af:outputText value="#{row.quantity}" id="otQty">
+                <f:convertNumber pattern="#0.00"/>
+              </af:outputText>
+            </af:column>
+
+            <af:column headerText="" id="colRemove" width="70" align="center">
+              <af:commandLink text="Remove"
+                              action="#{createInventoryDeliveryBean.removeLineItem}"
+                              id="clRemove" partialSubmit="true">
+                <af:setActionListener from="#{row.itemSku}"
+                                      to="#{createInventoryDeliveryBean.selectedSku}"/>
+              </af:commandLink>
+            </af:column>
+          </af:table>
+        </af:panelGroupLayout>
+
+        <!-- Section 4: Delivery Details -->
+        <af:panelFormLayout inlineStyle="background:#f0f0f0;padding:12px;margin-top:12px;
+                                         border:1px solid #999;border-radius:4px;">
+          <af:outputText value="Delivery Details"
+                         inlineStyle="font-size:14px;font-weight:bold;"/>
+          <af:spacer width="1" height="6"/>
+
+          <af:inputText label="Delivery Address"
+                        value="#{createInventoryDeliveryBean.deliveryAddress}"
+                        id="addrInput" required="true" columns="40"/>
+
+          <af:inputText label="Requested Date (YYYY-MM-DD)"
+                        value="#{createInventoryDeliveryBean.requestedDate}"
+                        id="dateInput" columns="12"/>
+
+          <af:inputText label="Notes"
+                        value="#{createInventoryDeliveryBean.notes}"
+                        id="notesInput" columns="40"/>
+        </af:panelFormLayout>
+
+        <!-- Actions -->
+        <af:panelGroupLayout layout="horizontal" inlineStyle="margin-top:12px;">
+          <af:commandButton text="Submit Delivery"
+                            action="#{createInventoryDeliveryBean.submitDelivery}"
+                            id="submitBtn"
+                            disabled="#{empty createInventoryDeliveryBean.cart}"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Reset Form"
+                            action="#{createInventoryDeliveryBean.resetForm}"
+                            id="resetBtn" immediate="true"/>
+        </af:panelGroupLayout>
+
+      </af:panelHeader>
+      </af:form>
+    </af:document>
+  </f:view>
+</jsp:root>

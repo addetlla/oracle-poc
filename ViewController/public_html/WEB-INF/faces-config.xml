@@ -23,4 +23,14 @@
     <managed-bean-class>view.beans.InventoryBean</managed-bean-class>
     <managed-bean-scope>view</managed-bean-scope>
   </managed-bean>
+  <managed-bean>
+    <managed-bean-name>createInventoryDeliveryBean</managed-bean-name>
+    <managed-bean-class>view.beans.CreateInventoryDeliveryBean</managed-bean-class>
+    <managed-bean-scope>view</managed-bean-scope>
+  </managed-bean>
+  <managed-bean>
+    <managed-bean-name>fulfillInventoryDeliveryBean</managed-bean-name>
+    <managed-bean-class>view.beans.FulfillInventoryDeliveryBean</managed-bean-class>
+    <managed-bean-scope>view</managed-bean-scope>
+  </managed-bean>
 </faces-config>

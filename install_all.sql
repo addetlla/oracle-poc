@@ -56,14 +56,14 @@ CREATE TABLE AUDIT_LOG (
     new_values  VARCHAR2(4000)
 );
 -- ============================================================
--- PKG_STORE_OPS - Updates for Employee CRUD (2024)
--- Adds missing get_all_employees, update_employee
--- Fixes find_employees_by_store to include store_number
+-- PKG_STORE_OPS v3 - Added Stores + Inventory CRUD (2025)
+-- Builds on v2 (2024) which added get_all_employees, update_employee
+-- Now includes full CRUD for STORES and INVENTORY_ITEMS
 -- ============================================================
 
 CREATE OR REPLACE PACKAGE PKG_STORE_OPS AS
 
-    -- Employee functions
+    -- Employee functions (v1 + v2)
     FUNCTION get_all_employees RETURN SYS_REFCURSOR;
     FUNCTION get_employee(p_emp_id VARCHAR2) RETURN SYS_REFCURSOR;
     FUNCTION find_employees_by_store(p_store_no VARCHAR2) RETURN SYS_REFCURSOR;
@@ -85,7 +85,40 @@ CREATE OR REPLACE PACKAGE PKG_STORE_OPS AS
     );
     PROCEDURE fire_employee(p_emp_id VARCHAR2);
 
-    -- Inventory functions
+    -- Store functions (v3)
+    FUNCTION get_all_stores RETURN SYS_REFCURSOR;
+    FUNCTION get_store(p_store_id NUMBER) RETURN SYS_REFCURSOR;
+    FUNCTION find_stores_by_city(p_city VARCHAR2) RETURN SYS_REFCURSOR;
+    FUNCTION get_next_store_id RETURN NUMBER;
+    PROCEDURE create_store(
+        p_store_number VARCHAR2,
+        p_store_name VARCHAR2,
+        p_address VARCHAR2,
+        p_city VARCHAR2,
+        p_state VARCHAR2,
+        p_zip VARCHAR2,
+        p_phone VARCHAR2,
+        p_manager_id VARCHAR2,
+        p_seating_capacity NUMBER,
+        p_drive_thru_yn VARCHAR2
+    );
+    PROCEDURE update_store(
+        p_store_id NUMBER,
+        p_store_number VARCHAR2,
+        p_store_name VARCHAR2,
+        p_address VARCHAR2,
+        p_city VARCHAR2,
+        p_state VARCHAR2,
+        p_zip VARCHAR2,
+        p_phone VARCHAR2,
+        p_manager_id VARCHAR2,
+        p_seating_capacity NUMBER,
+        p_drive_thru_yn VARCHAR2,
+        p_is_open VARCHAR2
+    );
+    PROCEDURE close_store(p_store_id NUMBER);
+
+    -- Inventory functions (v1 + v3)
     FUNCTION get_inventory_status(p_store_no VARCHAR2) RETURN SYS_REFCURSOR;
     PROCEDURE update_inventory(
         p_sku VARCHAR2,
@@ -93,8 +126,34 @@ CREATE OR REPLACE PACKAGE PKG_STORE_OPS AS
         p_store_no VARCHAR2
     );
     FUNCTION check_reorder_needed(p_sku VARCHAR2) RETURN CHAR;
+    FUNCTION get_all_inventory_items RETURN SYS_REFCURSOR;
+    FUNCTION get_inventory_item(p_sku VARCHAR2) RETURN SYS_REFCURSOR;
+    FUNCTION find_inventory_by_category(p_category VARCHAR2) RETURN SYS_REFCURSOR;
+    PROCEDURE add_inventory_item(
+        p_item_sku VARCHAR2,
+        p_item_name VARCHAR2,
+        p_category VARCHAR2,
+        p_unit_type VARCHAR2,
+        p_par_level NUMBER,
+        p_current_qty NUMBER,
+        p_unit_cost NUMBER,
+        p_supplier_name VARCHAR2,
+        p_supplier_phone VARCHAR2
+    );
+    PROCEDURE update_inventory_item(
+        p_item_sku VARCHAR2,
+        p_item_name VARCHAR2,
+        p_category VARCHAR2,
+        p_unit_type VARCHAR2,
+        p_par_level NUMBER,
+        p_current_qty NUMBER,
+        p_unit_cost NUMBER,
+        p_supplier_name VARCHAR2,
+        p_supplier_phone VARCHAR2
+    );
+    PROCEDURE deactivate_inventory_item(p_item_sku VARCHAR2);
 
-    -- General
+    -- General (v1)
     FUNCTION get_next_employee_id RETURN VARCHAR2;
     PROCEDURE log_audit(
         p_table VARCHAR2,
@@ -108,6 +167,10 @@ END PKG_STORE_OPS;
 /
 
 CREATE OR REPLACE PACKAGE BODY PKG_STORE_OPS AS
+
+    -- ============================================================
+    -- General utilities (v1)
+    -- ============================================================
 
     FUNCTION get_next_employee_id RETURN VARCHAR2 IS
         v_count NUMBER;
@@ -129,6 +192,10 @@ CREATE OR REPLACE PACKAGE BODY PKG_STORE_OPS AS
         INSERT INTO AUDIT_LOG (table_name, action, record_key, changed_by, old_values, new_values)
         VALUES (p_table, p_action, p_key, USER, p_old_val, p_new_val);
     END;
+
+    -- ============================================================
+    -- Employee CRUD (v1 + v2)
+    -- ============================================================
 
     FUNCTION get_all_employees RETURN SYS_REFCURSOR IS
         v_cursor SYS_REFCURSOR;
@@ -204,6 +271,118 @@ CREATE OR REPLACE PACKAGE BODY PKG_STORE_OPS AS
         COMMIT;
     END;
 
+    -- ============================================================
+    -- Store CRUD (v3)
+    -- ============================================================
+
+    FUNCTION get_next_store_id RETURN NUMBER IS
+        v_id NUMBER;
+    BEGIN
+        SELECT seq_store_id.NEXTVAL INTO v_id FROM DUAL;
+        RETURN v_id;
+    END;
+
+    FUNCTION get_all_stores RETURN SYS_REFCURSOR IS
+        v_cursor SYS_REFCURSOR;
+    BEGIN
+        OPEN v_cursor FOR
+            SELECT store_id, store_number, store_name, address_line1,
+                   city, state, zip, phone, manager_id,
+                   seating_capacity, drive_thru_yn, is_open
+            FROM STORES
+            WHERE is_open = 'Y'
+            ORDER BY store_number;
+        RETURN v_cursor;
+    END;
+
+    FUNCTION get_store(p_store_id NUMBER) RETURN SYS_REFCURSOR IS
+        v_cursor SYS_REFCURSOR;
+    BEGIN
+        OPEN v_cursor FOR
+            SELECT * FROM STORES WHERE store_id = p_store_id;
+        RETURN v_cursor;
+    END;
+
+    FUNCTION find_stores_by_city(p_city VARCHAR2) RETURN SYS_REFCURSOR IS
+        v_cursor SYS_REFCURSOR;
+    BEGIN
+        OPEN v_cursor FOR
+            SELECT store_id, store_number, store_name, address_line1,
+                   city, state, zip, phone, manager_id,
+                   seating_capacity, drive_thru_yn, is_open
+            FROM STORES
+            WHERE UPPER(city) LIKE '%' || UPPER(p_city) || '%'
+              AND is_open = 'Y'
+            ORDER BY store_number;
+        RETURN v_cursor;
+    END;
+
+    PROCEDURE create_store(
+        p_store_number VARCHAR2,
+        p_store_name VARCHAR2,
+        p_address VARCHAR2,
+        p_city VARCHAR2,
+        p_state VARCHAR2,
+        p_zip VARCHAR2,
+        p_phone VARCHAR2,
+        p_manager_id VARCHAR2,
+        p_seating_capacity NUMBER,
+        p_drive_thru_yn VARCHAR2
+    ) IS
+        v_new_id NUMBER;
+    BEGIN
+        v_new_id := get_next_store_id();
+        INSERT INTO STORES (store_id, store_number, store_name, address_line1,
+            city, state, zip, phone, manager_id, seating_capacity, drive_thru_yn, created_by)
+        VALUES (v_new_id, p_store_number, p_store_name, p_address,
+            p_city, p_state, p_zip, p_phone, p_manager_id, p_seating_capacity, p_drive_thru_yn, 'SYSTEM');
+        log_audit('STORES', 'INSERT', TO_CHAR(v_new_id), NULL, p_store_number || ' - ' || p_store_name);
+        COMMIT;
+    END;
+
+    PROCEDURE update_store(
+        p_store_id NUMBER,
+        p_store_number VARCHAR2,
+        p_store_name VARCHAR2,
+        p_address VARCHAR2,
+        p_city VARCHAR2,
+        p_state VARCHAR2,
+        p_zip VARCHAR2,
+        p_phone VARCHAR2,
+        p_manager_id VARCHAR2,
+        p_seating_capacity NUMBER,
+        p_drive_thru_yn VARCHAR2,
+        p_is_open VARCHAR2
+    ) IS
+    BEGIN
+        UPDATE STORES
+        SET store_number = p_store_number,
+            store_name = p_store_name,
+            address_line1 = p_address,
+            city = p_city,
+            state = p_state,
+            zip = p_zip,
+            phone = p_phone,
+            manager_id = p_manager_id,
+            seating_capacity = p_seating_capacity,
+            drive_thru_yn = p_drive_thru_yn,
+            is_open = p_is_open
+        WHERE store_id = p_store_id;
+        log_audit('STORES', 'UPDATE', TO_CHAR(p_store_id), NULL, p_store_number || ' - ' || p_store_name);
+        COMMIT;
+    END;
+
+    PROCEDURE close_store(p_store_id NUMBER) IS
+    BEGIN
+        UPDATE STORES SET is_open = 'N' WHERE store_id = p_store_id;
+        log_audit('STORES', 'CLOSE', TO_CHAR(p_store_id), 'Open', 'Closed');
+        COMMIT;
+    END;
+
+    -- ============================================================
+    -- Inventory CRUD (v1 existing + v3 new)
+    -- ============================================================
+
     FUNCTION get_inventory_status(p_store_no VARCHAR2) RETURN SYS_REFCURSOR IS
         v_cursor SYS_REFCURSOR;
     BEGIN
@@ -236,6 +415,94 @@ CREATE OR REPLACE PACKAGE BODY PKG_STORE_OPS AS
     BEGIN
         SELECT current_qty, par_level INTO v_qty, v_par FROM INVENTORY_ITEMS WHERE item_sku = p_sku;
         IF v_qty < v_par THEN RETURN 'Y'; ELSE RETURN 'N'; END IF;
+    END;
+
+    FUNCTION get_all_inventory_items RETURN SYS_REFCURSOR IS
+        v_cursor SYS_REFCURSOR;
+    BEGIN
+        OPEN v_cursor FOR
+            SELECT item_sku, item_name, category, unit_type,
+                   par_level, current_qty, unit_cost,
+                   supplier_name, supplier_phone
+            FROM INVENTORY_ITEMS
+            WHERE is_active = 'Y'
+            ORDER BY item_sku;
+        RETURN v_cursor;
+    END;
+
+    FUNCTION get_inventory_item(p_sku VARCHAR2) RETURN SYS_REFCURSOR IS
+        v_cursor SYS_REFCURSOR;
+    BEGIN
+        OPEN v_cursor FOR
+            SELECT * FROM INVENTORY_ITEMS WHERE item_sku = p_sku;
+        RETURN v_cursor;
+    END;
+
+    FUNCTION find_inventory_by_category(p_category VARCHAR2) RETURN SYS_REFCURSOR IS
+        v_cursor SYS_REFCURSOR;
+    BEGIN
+        OPEN v_cursor FOR
+            SELECT item_sku, item_name, category, unit_type,
+                   par_level, current_qty, unit_cost,
+                   supplier_name, supplier_phone
+            FROM INVENTORY_ITEMS
+            WHERE UPPER(category) LIKE '%' || UPPER(p_category) || '%'
+              AND is_active = 'Y'
+            ORDER BY item_sku;
+        RETURN v_cursor;
+    END;
+
+    PROCEDURE add_inventory_item(
+        p_item_sku VARCHAR2,
+        p_item_name VARCHAR2,
+        p_category VARCHAR2,
+        p_unit_type VARCHAR2,
+        p_par_level NUMBER,
+        p_current_qty NUMBER,
+        p_unit_cost NUMBER,
+        p_supplier_name VARCHAR2,
+        p_supplier_phone VARCHAR2
+    ) IS
+    BEGIN
+        INSERT INTO INVENTORY_ITEMS (item_sku, item_name, category, unit_type,
+            par_level, current_qty, unit_cost, supplier_name, supplier_phone, created_by)
+        VALUES (p_item_sku, p_item_name, p_category, p_unit_type,
+            p_par_level, p_current_qty, p_unit_cost, p_supplier_name, p_supplier_phone, 'SYSTEM');
+        log_audit('INVENTORY_ITEMS', 'INSERT', p_item_sku, NULL, p_item_name);
+        COMMIT;
+    END;
+
+    PROCEDURE update_inventory_item(
+        p_item_sku VARCHAR2,
+        p_item_name VARCHAR2,
+        p_category VARCHAR2,
+        p_unit_type VARCHAR2,
+        p_par_level NUMBER,
+        p_current_qty NUMBER,
+        p_unit_cost NUMBER,
+        p_supplier_name VARCHAR2,
+        p_supplier_phone VARCHAR2
+    ) IS
+    BEGIN
+        UPDATE INVENTORY_ITEMS
+        SET item_name = p_item_name,
+            category = p_category,
+            unit_type = p_unit_type,
+            par_level = p_par_level,
+            current_qty = p_current_qty,
+            unit_cost = p_unit_cost,
+            supplier_name = p_supplier_name,
+            supplier_phone = p_supplier_phone
+        WHERE item_sku = p_item_sku;
+        log_audit('INVENTORY_ITEMS', 'UPDATE', p_item_sku, NULL, p_item_name);
+        COMMIT;
+    END;
+
+    PROCEDURE deactivate_inventory_item(p_item_sku VARCHAR2) IS
+    BEGIN
+        UPDATE INVENTORY_ITEMS SET is_active = 'N' WHERE item_sku = p_item_sku;
+        log_audit('INVENTORY_ITEMS', 'DEACTIVATE', p_item_sku, 'Active', 'Inactive');
+        COMMIT;
     END;
 
 END PKG_STORE_OPS;
@@ -687,15 +954,18 @@ CREATE SEQUENCE seq_soi_id START WITH 1 INCREMENT BY 1;
 -- ============================================================
 -- FRANCHISE_PKG - Franchise Management Package
 -- Team: Raj, Priya, Anil (Offshore Dev Team)
--- Created: March 2006
+-- Created: March 2006 | Updated: 2025 (CRUD operations added)
 -- ============================================================
 -- We used a package like Mike's PKG_STORE_OPS, but our own structure.
 -- We call some of Sarah's procs too. Not sure if we should.
 -- If something breaks, contact Raj (+91 xxxxx xxxxx).
+-- 2025 update adds: get_all_franchises, get_franchise,
+--   find_franchises_by_territory, update_franchise, deactivate_franchise
 -- ============================================================
 
 CREATE OR REPLACE PACKAGE FRANCHISE_PKG AS
 
+    -- Original (2006)
     PROCEDURE add_franchise(
         p_code VARCHAR2,
         p_name VARCHAR2,
@@ -704,27 +974,42 @@ CREATE OR REPLACE PACKAGE FRANCHISE_PKG AS
         p_territory VARCHAR2,
         p_royalty_pct NUMBER
     );
-
     PROCEDURE approve_franchise(p_franchise_id NUMBER);
-
     FUNCTION get_franchise_revenue(p_franchise_id NUMBER, p_year NUMBER)
         RETURN NUMBER;
-
-    -- Added 2007: Calculate royalties owed
     FUNCTION calc_royalties(p_franchise_id NUMBER, p_quarter VARCHAR2)
         RETURN NUMBER;
-
-    -- This procedure calculates orders under a franchise.
-    -- We call Sarah's sp_OrderProcessing because it already works.
-    -- BUT we also have our own calculation that's slightly different.
-    -- Our calculation includes tax in the subtotal (business requirement from franchise ops).
-    -- That's why this exists separately. See sp_get_order_total for the non-franchise version.
     FUNCTION calculate_franchise_order_total(p_franchise_id NUMBER) RETURN NUMBER;
+
+    -- New CRUD (2025)
+    FUNCTION get_all_franchises RETURN SYS_REFCURSOR;
+    FUNCTION get_franchise(p_franchise_id NUMBER) RETURN SYS_REFCURSOR;
+    FUNCTION find_franchises_by_territory(p_territory VARCHAR2) RETURN SYS_REFCURSOR;
+    PROCEDURE update_franchise(
+        p_franchise_id NUMBER,
+        p_franchise_code VARCHAR2,
+        p_franchise_name VARCHAR2,
+        p_owner_first VARCHAR2,
+        p_owner_last VARCHAR2,
+        p_owner_phone VARCHAR2,
+        p_owner_email VARCHAR2,
+        p_territory VARCHAR2,
+        p_total_locations NUMBER,
+        p_royalty_pct NUMBER,
+        p_agreement_start VARCHAR2,
+        p_agreement_end VARCHAR2,
+        p_status VARCHAR2
+    );
+    PROCEDURE deactivate_franchise(p_franchise_id NUMBER);
 
 END FRANCHISE_PKG;
 /
 
 CREATE OR REPLACE PACKAGE BODY FRANCHISE_PKG AS
+
+    -- ============================================================
+    -- Original procedures (2006)
+    -- ============================================================
 
     PROCEDURE add_franchise(
         p_code VARCHAR2,
@@ -748,7 +1033,6 @@ CREATE OR REPLACE PACKAGE BODY FRANCHISE_PKG AS
         INSERT INTO FRANCHISE_OWNERS (owner_id, first_nm, last_nm)
         VALUES (v_owner_id, p_owner_first, p_owner_last);
 
-        -- We also insert into the link table (though it's half-finished)
         INSERT INTO FRANCHISE_OWNER_LINK (link_id, franchise_id, owner_id, ownership_pct)
         VALUES (seq_fol_id.NEXTVAL, v_franchise_id, v_owner_id, 100);
 
@@ -765,23 +1049,16 @@ CREATE OR REPLACE PACKAGE BODY FRANCHISE_PKG AS
         RETURN NUMBER IS
         v_total NUMBER(12,2) := 0;
     BEGIN
-        -- Sum orders across all stores belonging to this franchise
-        -- This joins across Mike's, Sarah's, and our tables. If any of them
-        -- change their schema, this breaks. But it works for now.
         SELECT NVL(SUM(o.total_amount), 0)
         INTO v_total
         FROM ORDERS o
         JOIN STORES s ON o.store_id = s.store_id
         WHERE s.store_number IN (
-            -- TODO: Add franchise-to-store mapping. Currently stores aren't
-            -- actually linked to franchises in the DB. We approximate via territory.
-            -- Anil, 2006. Still TODO. Raj, 2008. Still TODO. Priya, 2010 (now on other project).
             SELECT store_number FROM STORES s2, FRANCHISES f
             WHERE f.franchise_id = p_franchise_id
               AND s2.city IN (SELECT city FROM STORES)
         )
         AND EXTRACT(YEAR FROM o.order_dt) = p_year;
-
         RETURN v_total;
     END get_franchise_revenue;
 
@@ -791,15 +1068,9 @@ CREATE OR REPLACE PACKAGE BODY FRANCHISE_PKG AS
         v_royalty_pct NUMBER(5,2);
         v_royalties NUMBER(12,2);
     BEGIN
-        -- Determine year from quarter string like 'Q1-2007'
-        -- Actually we just hardcode the date range. This was faster.
-        -- Someone should fix this to parse the quarter properly.
-
         v_revenue := get_franchise_revenue(p_franchise_id, 2007);
-
         SELECT royalty_pct INTO v_royalty_pct
         FROM FRANCHISES WHERE franchise_id = p_franchise_id;
-
         v_royalties := v_revenue * (v_royalty_pct / 100);
         RETURN v_royalties;
     END calc_royalties;
@@ -808,9 +1079,6 @@ CREATE OR REPLACE PACKAGE BODY FRANCHISE_PKG AS
         RETURN NUMBER IS
         v_total NUMBER(12,2);
     BEGIN
-        -- This calculates total INCLUDING tax, unlike sp_get_order_total
-        -- which returns pre-tax subtotal. Franchise ops needs tax-inclusive.
-        -- See email thread "Royalty calculation discrepancy - URGENT" from Oct 2007.
         SELECT NVL(SUM(o.total_amount + o.tax_amount), 0)
         INTO v_total
         FROM ORDERS o
@@ -818,10 +1086,93 @@ CREATE OR REPLACE PACKAGE BODY FRANCHISE_PKG AS
         WHERE s.store_number IN (
             SELECT store_number FROM STORES s2, FRANCHISES f
             WHERE f.franchise_id = p_franchise_id
-              AND s2.city IN (SELECT city FROM STORES)  -- Same hack as above
+              AND s2.city IN (SELECT city FROM STORES)
         );
         RETURN v_total;
     END calculate_franchise_order_total;
+
+    -- ============================================================
+    -- New CRUD procedures (2025)
+    -- ============================================================
+
+    FUNCTION get_all_franchises RETURN SYS_REFCURSOR IS
+        v_cursor SYS_REFCURSOR;
+    BEGIN
+        OPEN v_cursor FOR
+            SELECT franchise_id, franchise_code, franchise_name,
+                   owner_first_nm, owner_last_nm, owner_phone, owner_email,
+                   territory, total_locations, royalty_pct,
+                   agreement_start, agreement_end, status
+            FROM FRANCHISES
+            WHERE status != 'INACTIVE'
+            ORDER BY franchise_id;
+        RETURN v_cursor;
+    END;
+
+    FUNCTION get_franchise(p_franchise_id NUMBER) RETURN SYS_REFCURSOR IS
+        v_cursor SYS_REFCURSOR;
+    BEGIN
+        OPEN v_cursor FOR
+            SELECT * FROM FRANCHISES WHERE franchise_id = p_franchise_id;
+        RETURN v_cursor;
+    END;
+
+    FUNCTION find_franchises_by_territory(p_territory VARCHAR2) RETURN SYS_REFCURSOR IS
+        v_cursor SYS_REFCURSOR;
+    BEGIN
+        OPEN v_cursor FOR
+            SELECT franchise_id, franchise_code, franchise_name,
+                   owner_first_nm, owner_last_nm, owner_phone, owner_email,
+                   territory, total_locations, royalty_pct,
+                   agreement_start, agreement_end, status
+            FROM FRANCHISES
+            WHERE UPPER(territory) LIKE '%' || UPPER(p_territory) || '%'
+              AND status != 'INACTIVE'
+            ORDER BY franchise_id;
+        RETURN v_cursor;
+    END;
+
+    PROCEDURE update_franchise(
+        p_franchise_id NUMBER,
+        p_franchise_code VARCHAR2,
+        p_franchise_name VARCHAR2,
+        p_owner_first VARCHAR2,
+        p_owner_last VARCHAR2,
+        p_owner_phone VARCHAR2,
+        p_owner_email VARCHAR2,
+        p_territory VARCHAR2,
+        p_total_locations NUMBER,
+        p_royalty_pct NUMBER,
+        p_agreement_start VARCHAR2,
+        p_agreement_end VARCHAR2,
+        p_status VARCHAR2
+    ) IS
+    BEGIN
+        UPDATE FRANCHISES
+        SET franchise_code = p_franchise_code,
+            franchise_name = p_franchise_name,
+            owner_first_nm = p_owner_first,
+            owner_last_nm = p_owner_last,
+            owner_phone = p_owner_phone,
+            owner_email = p_owner_email,
+            territory = p_territory,
+            total_locations = p_total_locations,
+            royalty_pct = p_royalty_pct,
+            agreement_start = TO_DATE(p_agreement_start, 'YYYY-MM-DD'),
+            agreement_end = TO_DATE(p_agreement_end, 'YYYY-MM-DD'),
+            status = p_status,
+            last_mod_date = SYSDATE,
+            last_mod_user = 'SYSTEM'
+        WHERE franchise_id = p_franchise_id;
+        COMMIT;
+    END;
+
+    PROCEDURE deactivate_franchise(p_franchise_id NUMBER) IS
+    BEGIN
+        UPDATE FRANCHISES SET status = 'INACTIVE', last_mod_date = SYSDATE, last_mod_user = 'SYSTEM'
+        WHERE franchise_id = p_franchise_id;
+        COMMIT;
+    END;
 
 END FRANCHISE_PKG;
 /
@@ -2408,7 +2759,7 @@ END DELIVERY_PKG;
 -- ============================================================
 -- PACKAGE/PROCEDURE              | AUTHOR  | YEAR | STATUS
 -- -------------------------------+---------+------+----------
--- PKG_STORE_OPS                  | Mike    | 2000 | ACTIVE - Everything depends on this
+-- PKG_STORE_OPS (v3)             | Mike    | 2000 | ACTIVE - Emp+Store+Inventory CRUD. Everything depends on this
 -- sp_create_order                | Sarah   | 2003 | ACTIVE - POS still uses directly
 -- sp_add_order_item              | Sarah   | 2003 | ACTIVE
 -- sp_complete_order              | Sarah   | 2003 | ACTIVE - Called by 6+ other procs
@@ -2416,7 +2767,7 @@ END DELIVERY_PKG;
 -- sp_calculate_inventory_usage   | Sarah   | 2003 | UNKNOWN - May be dead code
 -- sp_log_hours                   | Sarah   | 2003 | ACTIVE
 -- sp_calculate_payroll           | Sarah   | 2003 | ACTIVE - But payroll moving to ADP in 2024
--- FRANCHISE_PKG                  | Raj     | 2006 | SEMI-ACTIVE - Only 3 franchises use it
+-- FRANCHISE_PKG (updated 2025)   | Raj     | 2006 | ACTIVE - Full CRUD added in 2025
 -- SUPPLIER_PKG                   | Anil    | 2006 | ACTIVE
 -- sp_register_customer           | Jason   | 2009 | ACTIVE - Web registration
 -- sp_check_email_exists          | Jason   | 2009 | ACTIVE
@@ -2515,3 +2866,484 @@ END DELIVERY_PKG;
 -- - MV_LEGACY_DAILY_SALES_PRE_2015: CFO's spreadsheet depends on it
 -- - sp_complete_order: hardcoded SKU mappings, known buggy, still critical
 -- - The nightly refresh job: undocumented, fragile, essential
+
+
+-- ============================================================
+-- Inventory Delivery Enhancement - 2026
+-- ============================================================
+-- New delivery tracking for inventory supply shipments
+-- to stores. Separate from the 2020 DELIVERY_PKG (food delivery).
+-- Uses Oracle Advanced Queues for guaranteed message passing
+-- between delivery creation and fulfillment.
+-- ============================================================
+
+-- ============================================================
+-- TABLES
+-- ============================================================
+
+CREATE TABLE INVENTORY_DELIVERIES (
+    delivery_id             NUMBER PRIMARY KEY,
+    destination_store_id    NUMBER NOT NULL,
+    delivery_address        VARCHAR2(200),
+    requested_date          DATE,
+    notes                   VARCHAR2(500),
+    status                  VARCHAR2(20) DEFAULT 'PENDING',
+    aq_msg_id               RAW(16),
+    fulfilled_date          DATE,
+    fulfilled_by            VARCHAR2(30),
+    created_date            DATE DEFAULT SYSDATE,
+    created_by              VARCHAR2(30) DEFAULT USER,
+    CONSTRAINT fk_idel_store FOREIGN KEY (destination_store_id)
+        REFERENCES STORES(store_id)
+);
+
+CREATE TABLE INVENTORY_DELIVERY_ITEMS (
+    line_item_id    NUMBER PRIMARY KEY,
+    delivery_id     NUMBER NOT NULL,
+    item_sku        VARCHAR2(15) NOT NULL,
+    quantity        NUMBER(8,2) NOT NULL,
+    unit_cost       NUMBER(8,4),
+    created_date    DATE DEFAULT SYSDATE,
+    CONSTRAINT fk_idelitem_delivery FOREIGN KEY (delivery_id)
+        REFERENCES INVENTORY_DELIVERIES(delivery_id) ON DELETE CASCADE,
+    CONSTRAINT fk_idelitem_sku FOREIGN KEY (item_sku)
+        REFERENCES INVENTORY_ITEMS(item_sku)
+);
+
+-- ============================================================
+-- SEQUENCES
+-- ============================================================
+
+CREATE SEQUENCE seq_inv_delivery_id START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE seq_inv_delivery_item_id START WITH 1 INCREMENT BY 1;
+
+-- ============================================================
+-- ORACLE ADVANCED QUEUES
+-- ============================================================
+
+-- Payload object type: what gets carried in each queue message
+CREATE OR REPLACE TYPE inv_delivery_payload AS OBJECT (
+    delivery_id             NUMBER,
+    destination_store_id    NUMBER,
+    created_date            DATE,
+    status_at_enqueue       VARCHAR2(20)
+);
+/
+
+-- Queue table and queue
+BEGIN
+    DBMS_AQADM.CREATE_QUEUE_TABLE(
+        queue_table        => 'inv_delivery_queue_tbl',
+        queue_payload_type => 'inv_delivery_payload',
+        sort_list          => 'ENQ_TIME',
+        multiple_consumers => FALSE,
+        comment            => 'BurgerQuick Inventory Delivery Queue - FIFO ordered'
+    );
+
+    DBMS_AQADM.CREATE_QUEUE(
+        queue_name  => 'inv_delivery_queue',
+        queue_table => 'inv_delivery_queue_tbl',
+        comment     => 'Queue for inventory delivery processing'
+    );
+
+    DBMS_AQADM.START_QUEUE(
+        queue_name => 'inv_delivery_queue'
+    );
+END;
+/
+
+-- Grants for the application schema user
+-- Run as DBA or schema owner with grant privileges
+GRANT EXECUTE ON inv_delivery_payload TO system;
+BEGIN
+    DBMS_AQADM.GRANT_QUEUE_PRIVILEGE(
+        privilege     => 'ENQUEUE',
+        queue_name    => 'inv_delivery_queue',
+        grantee       => 'system',
+        grant_option  => FALSE
+    );
+    DBMS_AQADM.GRANT_QUEUE_PRIVILEGE(
+        privilege     => 'DEQUEUE',
+        queue_name    => 'inv_delivery_queue',
+        grantee       => 'system',
+        grant_option  => FALSE
+    );
+END;
+/
+
+-- ============================================================
+-- DELIVERY_ENHANCEMENT_PKG - Inventory Delivery Processing
+-- Author: BurgerQuick Systems, 2026
+-- ============================================================
+-- Handles inventory supply deliveries to stores.
+-- Uses Oracle AQ (inv_delivery_queue) to bridge creation
+-- and fulfillment flows.
+--
+-- Does NOT replace DELIVERY_PKG (2020) — that handles
+-- food delivery to customers. This handles inventory
+-- supply delivery to stores. Different domains.
+-- ============================================================
+
+CREATE OR REPLACE PACKAGE DELIVERY_ENHANCEMENT_PKG AS
+
+    PROCEDURE create_inventory_delivery(
+        p_destination_store_id IN NUMBER,
+        p_delivery_address     IN VARCHAR2,
+        p_requested_date       IN VARCHAR2,
+        p_notes                IN VARCHAR2,
+        p_items                IN VARCHAR2,
+        p_delivery_id          OUT NUMBER
+    );
+
+    FUNCTION get_active_inventory_items RETURN SYS_REFCURSOR;
+
+    FUNCTION get_all_stores RETURN SYS_REFCURSOR;
+
+    FUNCTION get_pending_deliveries RETURN SYS_REFCURSOR;
+
+    FUNCTION get_delivery_items(p_delivery_id NUMBER) RETURN SYS_REFCURSOR;
+
+    PROCEDURE fulfill_inventory_delivery(
+        p_delivery_id  IN NUMBER,
+        p_fulfilled_by IN VARCHAR2
+    );
+
+    PROCEDURE cancel_inventory_delivery(
+        p_delivery_id IN NUMBER,
+        p_reason      IN VARCHAR2
+    );
+
+END DELIVERY_ENHANCEMENT_PKG;
+/
+
+
+
+
+
+CREATE OR REPLACE PACKAGE BODY DELIVERY_ENHANCEMENT_PKG AS
+
+    -------------------------------------------------------------------
+    -- Helper: parse next "SKU:QTY" from semicolon-delimited string
+    -------------------------------------------------------------------
+    PROCEDURE parse_next_item(
+        p_items_str IN OUT VARCHAR2,
+        p_sku       OUT VARCHAR2,
+        p_qty       OUT NUMBER
+    ) IS
+        v_semi  NUMBER;
+        v_colon NUMBER;
+        v_item  VARCHAR2(100);
+    BEGIN
+        p_sku := NULL;
+        p_qty := NULL;
+        IF p_items_str IS NULL OR LENGTH(TRIM(p_items_str)) = 0 THEN
+            RETURN;
+        END IF;
+        v_semi := INSTR(p_items_str, ';');
+        IF v_semi = 0 THEN
+            v_item := p_items_str;
+            p_items_str := NULL;
+        ELSE
+            v_item := SUBSTR(p_items_str, 1, v_semi - 1);
+            p_items_str := SUBSTR(p_items_str, v_semi + 1);
+        END IF;
+        v_colon := INSTR(v_item, ':');
+        IF v_colon > 0 THEN
+            p_sku := SUBSTR(v_item, 1, v_colon - 1);
+            p_qty := TO_NUMBER(SUBSTR(v_item, v_colon + 1));
+        END IF;
+    END parse_next_item;
+
+    -------------------------------------------------------------------
+    -- CREATE DELIVERY
+    -------------------------------------------------------------------
+    PROCEDURE create_inventory_delivery(
+        p_destination_store_id IN NUMBER,
+        p_delivery_address     IN VARCHAR2,
+        p_requested_date       IN VARCHAR2,
+        p_notes                IN VARCHAR2,
+        p_items                IN VARCHAR2,
+        p_delivery_id          OUT NUMBER
+    ) IS
+        v_items_str VARCHAR2(4000);
+        v_sku       VARCHAR2(15);
+        v_qty       NUMBER(8,2);
+        v_line_id   NUMBER;
+        v_req_date  DATE;
+        v_msg_id    RAW(16);
+    BEGIN
+        SELECT seq_inv_delivery_id.NEXTVAL INTO p_delivery_id FROM DUAL;
+
+        IF p_requested_date IS NOT NULL
+           AND LENGTH(TRIM(p_requested_date)) > 0 THEN
+            v_req_date := TO_DATE(TRIM(p_requested_date), 'YYYY-MM-DD');
+        END IF;
+
+        INSERT INTO INVENTORY_DELIVERIES (
+            delivery_id, destination_store_id, delivery_address,
+            requested_date, notes, status, created_date, created_by
+        ) VALUES (
+            p_delivery_id, p_destination_store_id, p_delivery_address,
+            v_req_date, p_notes,
+            'PENDING', SYSDATE, USER
+        );
+
+        -- Parse items
+        v_items_str := p_items;
+        LOOP
+            parse_next_item(v_items_str, v_sku, v_qty);
+            EXIT WHEN v_sku IS NULL OR v_qty IS NULL;
+            SELECT seq_inv_delivery_item_id.NEXTVAL INTO v_line_id FROM DUAL;
+            INSERT INTO INVENTORY_DELIVERY_ITEMS (
+                line_item_id, delivery_id, item_sku, quantity, created_date
+            ) VALUES (
+                v_line_id, p_delivery_id, v_sku, v_qty, SYSDATE
+            );
+        END LOOP;
+
+        -- AQ enqueue via dynamic SQL — no compile-time dependency on DBMS_AQ
+        BEGIN
+            EXECUTE IMMEDIATE '
+                DECLARE
+                    v_opts  DBMS_AQ.ENQUEUE_OPTIONS_T;
+                    v_props DBMS_AQ.MESSAGE_PROPERTIES_T;
+                    v_pld   inv_delivery_payload;
+                    v_mid   RAW(16);
+                BEGIN
+                    v_pld := inv_delivery_payload(:did, :sid, SYSDATE, ''PENDING'');
+                    DBMS_AQ.ENQUEUE(
+                        queue_name         => ''inv_delivery_queue'',
+                        enqueue_options    => v_opts,
+                        message_properties => v_props,
+                        payload            => v_pld,
+                        msgid              => v_mid
+                    );
+                    :msg := v_mid;
+                END;'
+                USING IN p_delivery_id, IN p_destination_store_id, OUT v_msg_id;
+        EXCEPTION
+            WHEN OTHERS THEN
+                v_msg_id := NULL;
+        END;
+
+        IF v_msg_id IS NOT NULL THEN
+            UPDATE INVENTORY_DELIVERIES
+            SET aq_msg_id = v_msg_id
+            WHERE delivery_id = p_delivery_id;
+        END IF;
+
+        COMMIT;
+    EXCEPTION
+        WHEN OTHERS THEN
+            ROLLBACK;
+            RAISE;
+    END create_inventory_delivery;
+
+    -------------------------------------------------------------------
+    -- DROPDOWN CURSORS
+    -------------------------------------------------------------------
+    FUNCTION get_active_inventory_items RETURN SYS_REFCURSOR IS
+        v_cur SYS_REFCURSOR;
+    BEGIN
+        OPEN v_cur FOR
+            SELECT item_sku, item_name, unit_type, current_qty
+            FROM INVENTORY_ITEMS
+            WHERE is_active = 'Y'
+            ORDER BY item_name;
+        RETURN v_cur;
+    END;
+
+    FUNCTION get_all_stores RETURN SYS_REFCURSOR IS
+        v_cur SYS_REFCURSOR;
+    BEGIN
+        OPEN v_cur FOR
+            SELECT store_id, store_number, store_name, city, state
+            FROM STORES
+            WHERE is_open = 'Y'
+            ORDER BY store_number;
+        RETURN v_cur;
+    END;
+
+    -------------------------------------------------------------------
+    -- QUEUE DATA
+    -------------------------------------------------------------------
+    FUNCTION get_pending_deliveries RETURN SYS_REFCURSOR IS
+        v_cur SYS_REFCURSOR;
+    BEGIN
+        OPEN v_cur FOR
+            SELECT d.delivery_id,
+                   d.destination_store_id,
+                   d.delivery_address,
+                   d.requested_date,
+                   d.notes,
+                   d.status,
+                   d.created_date,
+                   d.created_by,
+                   s.store_number,
+                   s.store_name,
+                   (SELECT COUNT(*)
+                    FROM INVENTORY_DELIVERY_ITEMS idi
+                    WHERE idi.delivery_id = d.delivery_id) AS item_count
+            FROM INVENTORY_DELIVERIES d
+            JOIN STORES s ON d.destination_store_id = s.store_id
+            WHERE d.status = 'PENDING'
+            ORDER BY d.delivery_id ASC;
+        RETURN v_cur;
+    END;
+
+    FUNCTION get_delivery_items(p_delivery_id NUMBER) RETURN SYS_REFCURSOR IS
+        v_cur SYS_REFCURSOR;
+    BEGIN
+        OPEN v_cur FOR
+            SELECT idi.line_item_id,
+                   idi.item_sku,
+                   idi.quantity,
+                   idi.unit_cost,
+                   ii.item_name,
+                   ii.unit_type,
+                   ii.current_qty AS current_inventory_qty
+            FROM INVENTORY_DELIVERY_ITEMS idi
+            JOIN INVENTORY_ITEMS ii ON idi.item_sku = ii.item_sku
+            WHERE idi.delivery_id = p_delivery_id
+            ORDER BY idi.line_item_id;
+        RETURN v_cur;
+    END;
+
+    -------------------------------------------------------------------
+    -- FULFILL
+    -------------------------------------------------------------------
+    PROCEDURE fulfill_inventory_delivery(
+        p_delivery_id  IN NUMBER,
+        p_fulfilled_by IN VARCHAR2
+    ) IS
+        v_msg_id RAW(16);
+        v_current_status VARCHAR2(20);
+        resource_busy EXCEPTION;
+        PRAGMA EXCEPTION_INIT(resource_busy, -54);
+    BEGIN
+        BEGIN
+            SELECT status INTO v_current_status
+            FROM INVENTORY_DELIVERIES
+            WHERE delivery_id = p_delivery_id
+            FOR UPDATE NOWAIT;
+        EXCEPTION
+            WHEN resource_busy THEN
+                RAISE_APPLICATION_ERROR(-20002, 'This delivery is currently locked by another transaction.');
+            WHEN NO_DATA_FOUND THEN
+                RAISE_APPLICATION_ERROR(-20003, 'Delivery with ID ' || p_delivery_id || ' does not exist.');
+        END;
+
+        IF v_current_status != 'PENDING' THEN
+            RAISE_APPLICATION_ERROR(-20001, 'Delivery has already been fulfilled, is processing, or was cancelled.');
+        END IF;
+
+        UPDATE INVENTORY_DELIVERIES
+        SET status = 'PROCESSING'
+        WHERE delivery_id = p_delivery_id;
+
+        FOR rec IN (
+            SELECT item_sku, quantity
+            FROM INVENTORY_DELIVERY_ITEMS
+            WHERE delivery_id = p_delivery_id
+        ) LOOP
+            PKG_STORE_OPS.update_inventory(
+                p_sku             => rec.item_sku,
+                p_quantity_change => rec.quantity,
+                p_store_no        => NULL
+            );
+        END LOOP;
+
+        UPDATE INVENTORY_DELIVERIES
+        SET status = 'COMPLETED',
+            fulfilled_date = SYSDATE,
+            fulfilled_by = p_fulfilled_by
+        WHERE delivery_id = p_delivery_id;
+
+        -- Dequeue AQ message via dynamic SQL
+        SELECT aq_msg_id INTO v_msg_id
+        FROM INVENTORY_DELIVERIES
+        WHERE delivery_id = p_delivery_id;
+
+        IF v_msg_id IS NOT NULL THEN
+            BEGIN
+                EXECUTE IMMEDIATE '
+                    DECLARE
+                        v_opts  DBMS_AQ.DEQUEUE_OPTIONS_T;
+                        v_props DBMS_AQ.MESSAGE_PROPERTIES_T;
+                        v_pld   inv_delivery_payload;
+                        v_mid   RAW(16);
+                    BEGIN
+                        v_opts.msgid     := :m;
+                        v_opts.wait      := DBMS_AQ.NO_WAIT;
+                        v_opts.navigation := DBMS_AQ.FIRST_MESSAGE;
+                        DBMS_AQ.DEQUEUE(
+                            queue_name         => ''inv_delivery_queue'',
+                            dequeue_options    => v_opts,
+                            message_properties => v_props,
+                            payload            => v_pld,
+                            msgid              => v_mid
+                        );
+                    END;'
+                    USING IN v_msg_id;
+            EXCEPTION
+                WHEN OTHERS THEN NULL;
+            END;
+        END IF;
+
+        COMMIT;
+    EXCEPTION
+        WHEN OTHERS THEN
+            PKG_STORE_OPS.log_audit(
+                'INVENTORY_DELIVERIES', 'FULFILL_E',
+                TO_CHAR(p_delivery_id), NULL, SQLERRM
+            );
+            ROLLBACK;
+            RAISE;
+    END fulfill_inventory_delivery;
+
+    -------------------------------------------------------------------
+    -- CANCEL
+    -------------------------------------------------------------------
+    PROCEDURE cancel_inventory_delivery(
+        p_delivery_id IN NUMBER,
+        p_reason      IN VARCHAR2
+    ) IS
+        v_current_status VARCHAR2(20);
+        v_notes VARCHAR2(500);
+        resource_busy EXCEPTION;
+        PRAGMA EXCEPTION_INIT(resource_busy, -54);
+    BEGIN
+        BEGIN
+            SELECT status INTO v_current_status
+            FROM INVENTORY_DELIVERIES
+            WHERE delivery_id = p_delivery_id
+            FOR UPDATE NOWAIT;
+        EXCEPTION
+            WHEN resource_busy THEN
+                RAISE_APPLICATION_ERROR(-20002, 'This delivery is currently locked by another operation.');
+            WHEN NO_DATA_FOUND THEN
+                RAISE_APPLICATION_ERROR(-20003, 'Delivery with ID ' || p_delivery_id || ' does not exist.');
+        END;
+
+        IF v_current_status != 'PENDING' THEN
+            RAISE_APPLICATION_ERROR(-20001, 'Only PENDING deliveries can be cancelled.');
+        END IF;
+
+        IF p_reason IS NOT NULL THEN
+            SELECT notes INTO v_notes
+            FROM INVENTORY_DELIVERIES
+            WHERE delivery_id = p_delivery_id;
+            UPDATE INVENTORY_DELIVERIES
+            SET status = 'CANCELLED',
+                notes = v_notes || ' [CANCELLED: ' || p_reason || ']'
+            WHERE delivery_id = p_delivery_id;
+        ELSE
+            UPDATE INVENTORY_DELIVERIES
+            SET status = 'CANCELLED'
+            WHERE delivery_id = p_delivery_id;
+        END IF;
+        COMMIT;
+    END cancel_inventory_delivery;
+
+END DELIVERY_ENHANCEMENT_PKG;
+/

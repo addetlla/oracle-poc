@@ -1,0 +1,209 @@
+<jsp:root xmlns:jsp="http://java.sun.com/JSP/Page"
+          xmlns:f="http://java.sun.com/jsf/core"
+          xmlns:af="http://xmlns.oracle.com/adf/faces/rich"
+          version="2.1">
+
+  <jsp:directive.page contentType="text/html;charset=UTF-8"/>
+
+  <f:view>
+    <af:document title="BurgerQuick - Fulfill Inventory Delivery">
+
+      <af:form>
+        <af:panelHeader text="Fulfill Inventory Delivery">
+
+        <!-- Navigation Bar -->
+        <af:panelGroupLayout layout="horizontal"
+                             inlineStyle="background:#1a73e8;padding:8px 12px;margin-bottom:8px;border-radius:4px;">
+          <af:commandButton text="Employees"
+                            action="/pages/employeeDirectory.jspx"
+                            id="navEmp" immediate="true"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Franchisees"
+                            action="/pages/franchiseeDirectory.jspx"
+                            id="navFran" immediate="true"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Inventory"
+                            action="/pages/inventoryDirectory.jspx"
+                            id="navInv" immediate="true"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Create Delivery"
+                            action="/pages/createInventoryDelivery.jspx"
+                            id="navCreateDel" immediate="true"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Fulfill Delivery"
+                            action="/pages/fulfillInventoryDelivery.jspx"
+                            id="navFulfillDel" disabled="true" immediate="true"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Stores"
+                            action="/pages/storeDirectory.jspx"
+                            id="navStore" immediate="true"/>
+        </af:panelGroupLayout>
+
+        <!-- Status message -->
+        <af:panelGroupLayout id="msgWrapper"
+                             partialTriggers="fulfillBtn cancelBtn refreshBtn">
+          <af:panelGroupLayout id="msgPanel"
+                               rendered="#{fulfillInventoryDeliveryBean.message != null}"
+                               inlineStyle="background:#fff3cd;padding:8px;margin-bottom:10px;">
+            <af:outputText value="#{fulfillInventoryDeliveryBean.message}" id="statusMsg"/>
+          </af:panelGroupLayout>
+        </af:panelGroupLayout>
+
+        <!-- Toolbar -->
+        <f:facet name="toolbar">
+          <af:toolbar>
+            <af:commandButton text="Refresh Queue"
+                              action="#{fulfillInventoryDeliveryBean.loadPendingDeliveries}"
+                              id="refreshBtn"/>
+          </af:toolbar>
+        </f:facet>
+
+        <!-- Pending Deliveries Queue -->
+        <af:outputText value="Pending Deliveries (#{fulfillInventoryDeliveryBean.pendingDeliveries.size()})"
+                       inlineStyle="font-size:14px;font-weight:bold;"
+                       id="queueTitle"/>
+
+        <af:table value="#{fulfillInventoryDeliveryBean.pendingDeliveries}"
+                  var="row"
+                  emptyText="No pending deliveries."
+                  id="deliveryTable"
+                  summary="Pending Delivery Queue"
+                  partialTriggers="fulfillBtn cancelBtn refreshBtn">
+
+          <af:column headerText="" id="colSelect" width="40" align="center">
+            <af:commandLink text="#{row.deliveryId == fulfillInventoryDeliveryBean.selectedDeliveryId ? 'Sel ✓' : 'Sel'}"
+                            action="#{fulfillInventoryDeliveryBean.selectDelivery}"
+                            id="clSelect"
+                            partialSubmit="true"
+                            inlineStyle="#{row.deliveryId == fulfillInventoryDeliveryBean.selectedDeliveryId ? 'font-weight:bold;color:#1a73e8;' : ''}">
+              <af:setActionListener from="#{row.deliveryId}"
+                                    to="#{fulfillInventoryDeliveryBean.selectedDeliveryId}"/>
+            </af:commandLink>
+          </af:column>
+
+          <af:column sortable="true" headerText="Delivery ID" id="colId" width="90">
+            <af:outputText value="#{row.deliveryId}" id="otId"/>
+          </af:column>
+
+          <af:column sortable="true" headerText="Store" id="colStore">
+            <af:outputText value="#{row.storeLabel}" id="otStore"/>
+          </af:column>
+
+          <af:column sortable="true" headerText="Address" id="colAddr">
+            <af:outputText value="#{row.deliveryAddress}" id="otAddr"/>
+          </af:column>
+
+          <af:column sortable="true" headerText="Requested" id="colReqDate" width="100">
+            <af:outputText value="#{row.requestedDate}" id="otReqDate">
+              <f:convertDateTime pattern="yyyy-MM-dd"/>
+            </af:outputText>
+          </af:column>
+
+          <af:column sortable="true" headerText="Items" id="colItems" width="60" align="right">
+            <af:outputText value="#{row.itemCount}" id="otItems"/>
+          </af:column>
+
+          <af:column sortable="true" headerText="Created" id="colCreated" width="100">
+            <af:outputText value="#{row.createdDate}" id="otCreated">
+              <f:convertDateTime pattern="yyyy-MM-dd"/>
+            </af:outputText>
+          </af:column>
+        </af:table>
+
+        <!-- Selected Delivery Detail -->
+        <af:panelGroupLayout id="detailWrapper" partialTriggers="fulfillBtn cancelBtn refreshBtn deliveryTable">
+          <af:panelGroupLayout id="detailPanel"
+                               rendered="#{fulfillInventoryDeliveryBean.selectedDelivery != null}"
+                               inlineStyle="background:#f0f0f0;padding:12px;margin-top:12px;
+                                            border:1px solid #999;border-radius:4px;">
+
+            <af:outputText value="Delivery # #{fulfillInventoryDeliveryBean.selectedDelivery.deliveryId} Details"
+                           inlineStyle="font-size:14px;font-weight:bold;"
+                           id="detailTitle"/>
+
+            <af:spacer width="1" height="8"/>
+
+            <af:panelFormLayout>
+              <af:panelLabelAndMessage label="Store">
+                <af:outputText value="#{fulfillInventoryDeliveryBean.selectedDelivery.storeLabel}"
+                               id="detailStore"/>
+              </af:panelLabelAndMessage>
+              <af:panelLabelAndMessage label="Address">
+                <af:outputText value="#{fulfillInventoryDeliveryBean.selectedDelivery.deliveryAddress}"
+                               id="detailAddr"/>
+              </af:panelLabelAndMessage>
+              <af:panelLabelAndMessage label="Requested Date">
+                <af:outputText value="#{fulfillInventoryDeliveryBean.selectedDelivery.requestedDate}"
+                               id="detailDate">
+                  <f:convertDateTime pattern="yyyy-MM-dd"/>
+                </af:outputText>
+              </af:panelLabelAndMessage>
+            </af:panelFormLayout>
+
+            <af:spacer width="1" height="8"/>
+
+            <af:outputText value="Line Items"
+                           inlineStyle="font-size:13px;font-weight:bold;"
+                           id="itemsTitle"/>
+
+            <af:table value="#{fulfillInventoryDeliveryBean.lineItems}"
+                      var="item"
+                      emptyText="No line items."
+                      id="lineItemTable"
+                      summary="Delivery Line Items">
+
+              <af:column sortable="true" headerText="SKU" id="colLiSku" width="150">
+                <af:outputText value="#{item.itemSku}" id="otLiSku"/>
+              </af:column>
+
+              <af:column sortable="true" headerText="Item Name" id="colLiName">
+                <af:outputText value="#{item.itemName}" id="otLiName"/>
+              </af:column>
+
+              <af:column sortable="true" headerText="Unit" id="colLiUnit" width="70">
+                <af:outputText value="#{item.unitType}" id="otLiUnit"/>
+              </af:column>
+
+              <af:column sortable="true" headerText="Deliver Qty" id="colLiQty" width="100" align="right">
+                <af:outputText value="#{item.quantity}" id="otLiQty">
+                  <f:convertNumber pattern="#0.00"/>
+                </af:outputText>
+              </af:column>
+
+              <af:column sortable="true" headerText="Current Inventory" id="colLiCurrQty" width="130" align="right">
+                <af:outputText value="#{item.currentInventoryQty}" id="otLiCurrQty">
+                  <f:convertNumber pattern="#0.00"/>
+                </af:outputText>
+              </af:column>
+
+              <af:column headerText="After Fulfill" id="colLiAfter" width="110" align="right">
+                <af:outputText value="#{item.currentInventoryQty + item.quantity}"
+                               id="otLiAfter">
+                  <f:convertNumber pattern="#0.00"/>
+                </af:outputText>
+              </af:column>
+            </af:table>
+
+          </af:panelGroupLayout>
+        </af:panelGroupLayout>
+
+        <!-- Actions -->
+        <af:panelGroupLayout layout="horizontal" inlineStyle="margin-top:12px;"
+                             id="actionsPanel"
+                             partialTriggers="deliveryTable">
+          <af:commandButton text="Fulfill Delivery"
+                            action="#{fulfillInventoryDeliveryBean.fulfillDelivery}"
+                            id="fulfillBtn"
+                            disabled="#{fulfillInventoryDeliveryBean.selectedDelivery == null}"/>
+          <af:spacer width="8"/>
+          <af:commandButton text="Cancel Delivery"
+                            action="#{fulfillInventoryDeliveryBean.cancelDelivery}"
+                            id="cancelBtn"
+                            disabled="#{fulfillInventoryDeliveryBean.selectedDelivery == null}"/>
+        </af:panelGroupLayout>
+
+      </af:panelHeader>
+      </af:form>
+    </af:document>
+  </f:view>
+</jsp:root>

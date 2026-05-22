@@ -9,6 +9,8 @@ deploy/
 temp/
 out/
 .jdev_modified_files
+.cast-cache
+.cast-results
 
 # OS generated files
 .DS_Store

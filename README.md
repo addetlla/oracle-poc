@@ -11,13 +11,10 @@ Version 9.0 | Oracle ADF 12c | Oracle Database 19c
 This is an Oracle ADF application — there's no `npm install && npm start`. The PoC is designed to be read. Start here:
 
 ```
-1. LEGACY_HISTORY.md         <- The full 23-year story
-2. Model/database/           <- Trace the evolution era by era
-3. Model/src/model/          <- Java business layer with era-specific comments
-4. ViewController/           <- UI pages and managed beans
+1. Model/database/           <- Trace the evolution era by era
+2. Model/src/model/          <- Java business layer with era-specific comments
+3. ViewController/           <- UI pages and managed beans
 ```
-
-Every file has extensive comments telling you when it was written, by whom, why it's messy, and how it connects to everything else.
 
 ---
 
@@ -79,61 +76,6 @@ Business logic is database-centric by design. PL/SQL packages and stored procedu
 
 ---
 
-## Modules
-
-### Employee Management (2000)
-- Employee directory, hiring, role assignment, and payroll
-- `PKG_STORE_OPS` package: hire_employee, update_employee, and related procedures
-- `employeeDirectory.jspx` — web-based employee listing and management
-
-### Inventory & Store Operations (2000)
-- Inventory tracking with audit logging
-- SKU-based stock management across all locations
-- Central procedure: `PKG_STORE_OPS.update_inventory`
-
-### Order Processing (2003)
-- In-store POS order entry and fulfillment
-- `sp_OrderProcessing`: order creation, completion, cancellation
-- `ORDERS`, `ORDER_ITEMS`, `MENU_ITEMS` tables
-
-### Franchise Management (2006)
-- Franchise owner and location administration
-- Supplier relationship management and procurement tracking
-- `FRANCHISES`, `FRANCHISE_OWNERS`, `SUPPLIERS` tables
-
-### Web Ordering (2009)
-- Customer-facing online ordering platform
-- Customer registration and account management
-- `WEB_ORDER_PKG.place_online_order`: 3-level nested call chain to inventory
-- `CUSTOMERS`, `ONLINE_ORDERS`, `ONLINE_ORDER_ITEMS` tables
-
-### Loyalty & Mobile (2012)
-- Customer loyalty points program with rewards redemption
-- Mobile application backend services
-- `LOYALTY_PKG`, `p_MobileOps`: authentication, nearby store lookup, mobile ordering
-- Nightly loyalty points recalculation process
-
-### Business Intelligence (2015)
-- Sales reporting and analytics
-- Materialized views for dashboard performance
-- `RPT_DAILY_SALES_V2_FINAL_USE_THIS` — primary daily sales reporting package
-
-### API Layer (2018)
-- REST API wrappers for legacy stored procedures
-- `API_ORDER_SERVICE`: REST-friendly interface to existing order operations
-- Designed for incremental modernization via the Strangler Fig pattern
-
-### Delivery Management (2020)
-- Delivery order tracking and driver assignment
-- `DELIVERY_PKG`, `DELIVERY_ORDERS`, `DELIVERY_DRIVERS`
-- `deliveryTracker.jspx` — real-time delivery monitoring dashboard
-
-### Inventory Delivery & Queue System (2026)
-- Inventory supply delivery to stores (separate domain from food delivery)
-- `DELIVERY_ENHANCEMENT_PKG` — create, fulfill, and cancel inventory deliveries
-- `dashboard.jspx` — real-time metrics dashboard with 3-second polling
-- Built on Oracle Advanced Queues for reliable message passing
-
 #### Queue Architecture
 
 Two Oracle AQ queues handle the delivery lifecycle. The first is a work queue; the second is a pub/sub broadcast queue that feeds the dashboard.
@@ -179,11 +121,11 @@ Two Oracle AQ queues handle the delivery lifecycle. The first is a work queue; t
 
 **How messages flow:**
 
-| Step | What happens |
-|------|-------------|
-| Create delivery | Row inserted with `status='PENDING'`. One message enqueued to **both** queues. |
-| Fulfill delivery | Inventory updated. Status → `'COMPLETED'`. Original message dequeued from work queue. New `COMPLETED` message broadcast. |
-| Cancel delivery | Status → `'CANCELLED'`. New `CANCELLED` message broadcast. (Note: original work-queue message is never dequeued on cancel — known gap.) |
+| Step             | What happens                                                                                                                            |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Create delivery  | Row inserted with `status='PENDING'`. One message enqueued to **both** queues.                                                          |
+| Fulfill delivery | Inventory updated. Status → `'COMPLETED'`. Original message dequeued from work queue. New `COMPLETED` message broadcast.                |
+| Cancel delivery  | Status → `'CANCELLED'`. New `CANCELLED` message broadcast. (Note: original work-queue message is never dequeued on cancel — known gap.) |
 
 The `inv_delivery_queue` message acts as a lock — it's dequeued by `aq_msg_id` during fulfillment. The `inv_broadcast_queue` messages are fire-and-forget: each status transition pushes a new message, and the `DASHBOARD_METRICS_AGENT` subscriber dequeues it immediately via the async callback to update dashboard counters.
 
@@ -240,7 +182,7 @@ Application1/
 | `FRANCHISE_PKG`                     | Package | Franchise owner and location management            |
 | `SUPPLIER_PKG`                      | Package | Supplier and procurement operations                |
 | `DELIVERY_PKG`                      | Package | Delivery order assignment and tracking             |
-| `DELIVERY_ENHANCEMENT_PKG`          | Package | Inventory supply deliveries with Oracle AQ queues   |
+| `DELIVERY_ENHANCEMENT_PKG`          | Package | Inventory supply deliveries with Oracle AQ queues  |
 | `API_ORDER_SERVICE`                 | Package | REST API wrappers for order procedures             |
 | `RPT_DAILY_SALES_V2_FINAL_USE_THIS` | Package | Daily sales reporting                              |
 
@@ -315,12 +257,12 @@ nohup ~/.jdeveloper/system*/DefaultDomain/startWebLogic.sh > /tmp/wls.log 2>&1 &
 
 What `build.sh` does:
 
-| Step | Tool | What Happens |
-|------|------|--------------|
-| Compile Java | `ojdeploy` | Compiles Model + ViewController projects, runs dependency analysis |
-| Package WAR | `ojdeploy` | Writes `ViewController/deploy/Application1_ViewController_webapp.war` |
-| Package EAR | `ojdeploy` | Writes `deploy/Application1_Project1_Application1.ear` (WAR + ADF libs + descriptors) |
-| Deploy | Autodeploy | Copies EAR to WebLogic's `autodeploy/` directory — WebLogic hot-deploys in seconds |
+| Step         | Tool       | What Happens                                                                          |
+| ------------ | ---------- | ------------------------------------------------------------------------------------- |
+| Compile Java | `ojdeploy` | Compiles Model + ViewController projects, runs dependency analysis                    |
+| Package WAR  | `ojdeploy` | Writes `ViewController/deploy/Application1_ViewController_webapp.war`                 |
+| Package EAR  | `ojdeploy` | Writes `deploy/Application1_Project1_Application1.ear` (WAR + ADF libs + descriptors) |
+| Deploy       | Autodeploy | Copies EAR to WebLogic's `autodeploy/` directory — WebLogic hot-deploys in seconds    |
 
 Override paths via env vars: `MW_HOME=/other/path OJDEPLOY=/other/ojdeploy ./build.sh`
 
@@ -330,11 +272,11 @@ Override paths via env vars: `MW_HOME=/other/path OJDEPLOY=/other/ojdeploy ./bui
 
 ### Ports
 
-| Port | Purpose |
-|------|---------|
-| 7100 | HTTP (app) |
+| Port | Purpose                                         |
+| ---- | ----------------------------------------------- |
+| 7100 | HTTP (app)                                      |
 | 7101 | Admin Console (`http://127.0.0.1:7101/console`) |
-| 7102 | SSL |
+| 7102 | SSL                                             |
 
 ### Deploy to a Headless Ubuntu Server
 
@@ -350,12 +292,12 @@ JDeveloper (GUI IDE)                WebLogic Server (terminal only)
   +- Deploy EAR ---------------->     +- Connect to Oracle DB
 ```
 
-| What | Where it runs | GUI needed? |
-|------|--------------|-------------|
-| JDeveloper IDE | Your workstation | Yes |
-| WebLogic Server | Ubuntu server | No — fully CLI |
-| Oracle DB | Ubuntu server | No — SQL*Plus/CLI |
-| EAR deployment | Ubuntu server | No — WLST or autodeploy |
+| What                  | Where it runs          | GUI needed?                               |
+| --------------------- | ---------------------- | ----------------------------------------- |
+| JDeveloper IDE        | Your workstation       | Yes                                       |
+| WebLogic Server       | Ubuntu server          | No — fully CLI                            |
+| Oracle DB             | Ubuntu server          | No — SQL*Plus/CLI                         |
+| EAR deployment        | Ubuntu server          | No — WLST or autodeploy                   |
 | `build.sh` (ojdeploy) | Your workstation or CI | No — needs JDeveloper install, but no GUI |
 
 The build (ojdeploy) requires a JDeveloper installation even when run headless, so most teams build on a dev machine or CI server and deploy the EAR artifact to the headless server. Running the full ADF application also requires the JRF (Fusion Middleware) domain type — a vanilla WebLogic domain is not sufficient, and RCU must target the pluggable database (e.g. `XEPDB1`), not the root container.
@@ -376,36 +318,10 @@ This application has been in continuous production since 2000, evolving from a s
 | 2015         | Analytics        | Business intelligence and reporting        |
 | 2018         | Modernization    | REST API layer (partial)                   |
 | 2020         | Delivery         | Emergency pandemic delivery module         |
-| 2026         | Queue System     | Inventory delivery with Oracle AQ pub/sub   |
+| 2026         | Queue System     | Inventory delivery with Oracle AQ pub/sub  |
 | 2023–Present | Maintenance      | Documentation, known issues cataloging     |
 
 A detailed technical history and developer field guide is available in [LEGACY_HISTORY.md](LEGACY_HISTORY.md).
-
----
-
-## Known Considerations
-
-- **Call chain depth**: Order placement traverses up to 5 layers of nested procedure calls (API → Web → Orders → Completion → Inventory). Trace to `PKG_STORE_OPS` to reach the root.
-- **Naming conventions**: The database contains multiple naming styles from different development periods. See the field guide in LEGACY_HISTORY.md.
-- **Critical path**: `PKG_STORE_OPS.update_inventory` is called by all sales channels. Modifications require extensive regression testing.
-- **The `USERS` table** (2018) is an incomplete modernization artifact and is not the active user table.
-
----
-
-## "I just want to see the coolest parts"
-
-Read these files in order. They tell the story through the code itself:
-
-1. `LEGACY_HISTORY.md` — the full narrative (15 min read)
-2. `Model/database/2000_foundation/02_pkg_store_ops.sql` — the clean, simple origin
-3. `Model/database/2003_expansion/02_sp_order_processing.sql` — the first duplication
-4. `Model/database/2009_web_ordering/02_web_order_pkg.sql` — the deep nesting begins
-5. `Model/database/2012_loyalty_mobile/02_loyalty_pkg.sql` — triple-nested cursor loop, 45-min runtime
-6. `Model/database/2018_modernization/02_abandoned_microservice.sql` — the future that never happened
-7. `Model/database/2023_current/01_known_issues.sql` — the bill coming due
-8. `Model/src/model/util/LegacyDateUtils.java` vs `DateHelper.java` — two date classes, one $8K lawsuit
-
----
 
 ## License
 

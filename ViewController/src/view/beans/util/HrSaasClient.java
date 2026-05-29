@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 public class HrSaasClient {
 
     private static final Logger LOGGER     = Logger.getLogger(HrSaasClient.class.getName());
-    private static final String BASE_URL   = "https://burgerquick.hr.com/api/employee/";
+    private static final String BASE_URL   = "https://burgerquick.hr-domain.com/api/employee/";
     private static final String API_KEY    = "Xc|bkI_zMXQ{`w8YN5^vb5c#F6YR?4f'$xRy@WUPQ(\"hRy>Pe4";
     private static final int    CONNECT_MS = 3000;
     private static final int    READ_MS    = 3000;

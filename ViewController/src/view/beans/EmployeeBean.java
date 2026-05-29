@@ -8,6 +8,7 @@ import java.util.List;
 import javax.faces.event.ActionEvent;
 
 import oracle.jdbc.OracleTypes;
+import view.util.HrSaasClient;
 
 public class EmployeeBean {
 
@@ -180,6 +181,17 @@ public class EmployeeBean {
             cs.setBigDecimal(5, editHourlyRate);
             cs.setString(6, editStoreNumber);
             cs.execute();
+
+            // HR SaaS notification — best-effort, failures logged silently
+            try {
+                HrSaasClient.notifyEmployeeUpdate(
+                    editEmployeeId, editFirstName, editLastName,
+                    editPosition, editHourlyRate, editStoreNumber);
+            } catch (Exception hrEx) {
+                java.util.logging.Logger.getLogger(EmployeeBean.class.getName())
+                    .warning("HR SaaS notification skipped for " + editEmployeeId + ": " + hrEx.getMessage());
+            }
+
             message = "Employee " + editEmployeeId + " updated successfully.";
             editing = false;
             showForm = false;
